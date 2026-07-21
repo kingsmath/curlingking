@@ -1,38 +1,84 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
+<head>   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5YW0T2C109"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-5YW0T2C109');
+    </script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
 <title>컬링킹</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 <style>
-/* ========== 리셋 & 기본 ========== */
-*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent;}
-body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#fff;overflow:hidden;width:100vw;height:100vh;}
+/* ========== 전자칠판(대형 터치스크린) 최적화 변수 ========== */
+:root{
+  /* 실제 표시 영역 높이 (JS에서 innerHeight 기준으로 보정) */
+  --vh: 1vh;
+  --header-h: clamp(46px, 6.2vh, 60px);
+  --lanetop-h: clamp(38px, 6.8vh, 52px);
+}
+
+/* ========== 리셋 & 기본 (전자칠판 최적화) ========== */
+*,*::before,*::after{
+  margin:0;padding:0;box-sizing:border-box;
+  user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none; /* 롱프레스 시 iOS 콜아웃 메뉴 차단 */
+  -webkit-user-drag:none;user-drag:none;
+  touch-action:none; /* 핀치줌/스와이프/스크롤 등 기본 제스처 차단 */
+}
+html,body{
+  overscroll-behavior:none; /* 당겨서 새로고침/스와이프 내비게이션 차단 */
+  overflow:hidden;
+  touch-action:none;
+  -ms-touch-action:none;
+}
+html{
+  width:100%;
+  height:100vh;height:calc(var(--vh) * 100);height:100dvh;
+}
+body{
+  font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#fff;
+  width:100vw;
+  height:100vh;height:calc(var(--vh) * 100);height:100dvh;
+  overscroll-behavior:none;
+  position:fixed;top:0;left:0;right:0;
+}
+img,canvas,svg{-webkit-user-drag:none;user-drag:none;pointer-events:auto;}
 
 /* ========== 헤더 ========== */
 #header{
-  height:60px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;
+  height:var(--header-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(10px, 1.6vw, 20px);
   background:rgba(8,14,38,0.92);
   border-bottom:1px solid rgba(255,255,255,0.08);
   box-shadow:0 4px 20px rgba(0,0,0,0.5);
   position:relative;z-index:200;
+  flex-shrink:0;
+  touch-action:none;
 }
-#header .logo{display:flex;align-items:center;gap:10px;}
-#header .logo-icon{font-size:26px;filter:drop-shadow(0 0 8px #00d2ff);}
+#header .logo{display:flex;align-items:center;gap:clamp(6px,0.8vw,10px);min-width:0;}
+#header .logo-icon{font-size:clamp(18px,2.2vh,26px);filter:drop-shadow(0 0 8px #00d2ff);flex-shrink:0;}
 #header .logo-text{
-  font-size:18px;font-weight:800;
+  font-size:clamp(14px,1.6vh,18px);font-weight:800;
   background:linear-gradient(90deg,#fff,#00d2ff);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  letter-spacing:-0.3px;
+  letter-spacing:-0.3px;white-space:nowrap;
 }
-#header .logo-sub{font-size:10px;font-weight:400;color:#668;letter-spacing:1px;margin-top:-2px;-webkit-text-fill-color:#668;}
-#header .ctrl-group{display:flex;gap:10px;}
+#header .logo-sub{font-size:clamp(8px,1vh,10px);font-weight:400;color:#668;letter-spacing:1px;margin-top:-2px;-webkit-text-fill-color:#668;white-space:nowrap;}
+#header .ctrl-group{display:flex;gap:clamp(6px,0.8vw,10px);flex-shrink:0;}
 .ctrl-btn{
   background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
-  color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;
+  color:#fff;padding:clamp(5px,0.9vh,7px) clamp(8px,1.1vw,14px);border-radius:8px;
+  font-size:clamp(11px,1.5vh,13px);font-weight:600;
   cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:6px;
+  touch-action:none;white-space:nowrap;
 }
 .ctrl-btn:hover{background:rgba(255,255,255,0.12);transform:translateY(-1px);}
 .ctrl-btn:active{transform:translateY(1px);}
@@ -43,23 +89,28 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
 #lanes{
   display:grid;grid-template-columns:repeat(4,1fr);
   height:100%;width:100%;
+  min-height:0;
+  touch-action:none;
 }
 .lane-wrap{
   display:flex;flex-direction:column;
+  min-height:0;min-width:0;
   border-right:1px solid rgba(255,255,255,0.07);
   position:relative;overflow:hidden;
 }
 .lane-wrap:last-child{border-right:none;}
 .lane-top {
-  height: 52px;
+  height: var(--lanetop-h);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 clamp(6px, 0.8vw, 12px);
   background: rgba(8, 14, 38, 0.94);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
   z-index: 100;
+  touch-action: none;
 }
 .lane-wrap.turn-red .lane-top { border-bottom-color: rgba(255,60,105,0.45); }
 .lane-wrap.turn-yellow .lane-top { border-bottom-color: rgba(255,210,0,0.45); }
@@ -75,16 +126,17 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
   color: #ffd200;
 }
 .score-team .team-dot {
-  font-size: 13px;
+  font-size: clamp(11px, 1.5vh, 13px);
 }
 .score-team .team-name {
-  font-size: 10px;
+  font-size: clamp(8px, 1.1vh, 10px);
   font-weight: 800;
   letter-spacing: 0.5px;
   opacity: 0.85;
+  white-space: nowrap;
 }
 .score-team .team-score {
-  font-size: 22px;
+  font-size: clamp(16px, 2.4vh, 22px);
   font-weight: 900;
   font-family: 'Outfit', sans-serif;
   text-shadow: 0 0 10px currentColor;
@@ -92,21 +144,25 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
   text-align: center;
 }
 .lane-title {
-  font-size: 10px;
+  font-size: clamp(8px, 1.1vh, 10px);
   font-weight: 800;
   color: #8fa0c0;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 3px 8px;
+  padding: 3px clamp(5px, 0.7vw, 8px);
   border-radius: 12px;
   letter-spacing: 0.3px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .lane-body {
   flex: 1;
+  min-height: 0; /* flex 자식이 내용에 밀려 넘치는 것을 방지 (하단 잘림 방지 핵심) */
   position: relative;
+  overflow: hidden;
   background: linear-gradient(90deg, #0c1c3e 0%, #101f44 50%, #0c1c3e 100%);
+  touch-action: none;
 }
 .game-canvas {
   display: block;
@@ -117,6 +173,8 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
   top: 0;
   left: 0;
   z-index: 10;
+  touch-action: none;
+  -webkit-user-drag: none;
 }
 
 /* ========== 스위핑(비비기) 패드 ========== */
@@ -197,6 +255,7 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .ov-card{
   width:100%;max-width:300px;
+  max-height:100%;overflow-y:auto;touch-action:pan-y;
   background:rgba(20,35,75,0.65);
   border:1px solid rgba(255,255,255,0.12);
   border-radius:18px;padding:20px 18px;
@@ -252,14 +311,17 @@ body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#ff
 .screen-welcome {
   position: fixed;
   top: 0; left: 0;
-  width: 100vw; height: 100vh;
+  width: 100vw;
+  height: calc(var(--vh, 1vh) * 100);
+  height: 100dvh;
   z-index: 1000;
   background: radial-gradient(ellipse at 40% 0%, #0d1e40 0%, #091530 45%, #050a18 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: clamp(1rem, 3vh, 2rem);
   overflow-y: auto;
+  touch-action: pan-y; /* 카드가 화면보다 커질 경우 세로 스크롤만 허용 */
   font-family: 'Outfit', 'Noto Sans KR', sans-serif;
 }
 .welcome-container {
@@ -353,11 +415,14 @@ h1.main-title {
 
 /* ========== 게임장 레이아웃 ========== */
 #game-container {
-  height: calc(100vh - 60px);
+  height: calc(var(--vh, 1vh) * 100 - var(--header-h));
+  height: calc(100dvh - var(--header-h)); /* dvh 지원 브라우저에서 실제 표시영역으로 재계산 (상단 메뉴에 의한 하단 잘림 방지) */
   width: 100vw;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: none;
 }
 
 /* ========== 모달 오버레이 ========== */
@@ -378,6 +443,28 @@ h1.main-title {
 /* ========== 반응형 ========== */
 @media(max-width:900px){
   #lanes{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);}
+}
+
+/* 낮은 높이(예: 1366x768, 1205x753 등) 화면에서 설정/규칙 카드가
+   화면 높이를 넘지 않도록 여백과 크기를 축소 (하단 잘림 방지) */
+@media(max-height:820px){
+  .welcome-container{padding:1.5rem 1.6rem;}
+  .crown-deco{font-size:2rem;margin-bottom:0.1rem;}
+  h1.main-title{font-size:1.7rem;}
+  .subtitle-wrapper{margin:0.3rem 0 0.8rem;}
+  .btn-start,.btn-no-tournament{padding:0.6rem 1.6rem;font-size:0.85rem;margin-top:8px;}
+  .ov-card{padding:14px 14px;gap:10px;max-width:270px;}
+  .ov-title{font-size:16px;}
+  .set-btn,.stone-btn{padding:8px 6px;font-size:12px;}
+  .action-btn{padding:10px;font-size:13px;}
+  .trophy{font-size:40px;}
+  .game-modal-box{padding:1.3rem;max-height:90vh;max-height:90dvh;overflow-y:auto;touch-action:pan-y;}
+}
+@media(max-height:650px){
+  .welcome-container{padding:1rem 1.2rem;}
+  .crown-deco{font-size:1.6rem;}
+  h1.main-title{font-size:1.4rem;}
+  .subtitle{font-size:0.7rem;}
 }
 </style>
 </head>
@@ -423,7 +510,7 @@ h1.main-title {
 <div id="rules-modal" class="game-modal-overlay" style="display:none;">
     <div class="game-modal-box" style="text-align: left; padding: 25px;">
         <h2 style="color: #ffd200; font-size: 22px; text-align: center; margin-bottom: 15px;">🥌 컬링 경기 규칙 및 방법</h2>
-        <div class="rules-content" style="font-size: 13px; color: #d0d6e2; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+        <div class="rules-content" style="font-size: 13px; color: #d0d6e2; line-height: 1.6; max-height: 60vh; max-height: 60dvh; overflow-y: auto; padding-right: 8px; touch-action: pan-y;">
             <p><strong style="color: #00e5ff; font-size: 14px;">1. 경기 방식 및 선공</strong><br>
             - 경기가 시작되면 동전 던지기(선공 추첨)를 통해 선공과 후공을 정합니다.<br>
             - 컬링은 후공(마지막 돌을 던지는 해머 권한)이 절대적으로 유리하므로, 선공 추첨이 매우 중요합니다.</p>
@@ -732,6 +819,71 @@ h1.main-title {
 
 <script>
 // =====================================================
+// 전자칠판(대형 터치스크린) 최적화 뼈대
+// - 다중 동시 터치, 확대/축소 차단, 드래그/선택 차단,
+//   기본 제스처(스와이프 내비게이션/당겨서 새로고침) 차단,
+//   우클릭/롱프레스 메뉴 차단, 실제 표시영역 높이 보정
+// =====================================================
+(function(){
+  'use strict';
+
+  // 1) 실제 뷰포트 높이(--vh) 보정
+  //    전자칠판/모바일 브라우저 상단바로 인해 100vh가 실제 화면과 어긋나
+  //    콘텐츠 하단이 잘리는 문제를 방지한다.
+  function setRealVH(){
+    var vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', vh + 'px');
+  }
+  setRealVH();
+  window.addEventListener('resize', setRealVH, {passive:true});
+  window.addEventListener('orientationchange', function(){
+    setRealVH();
+    setTimeout(setRealVH, 250); // 일부 기기의 orientationchange 지연 보정
+  }, {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', setRealVH, {passive:true});
+  }
+
+  // 2) 우클릭 / 롱프레스 컨텍스트 메뉴 차단
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+  }, {passive:false});
+
+  // 3) 사파리(iOS) 핀치 제스처 이벤트 차단
+  ['gesturestart','gesturechange','gestureend'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, {passive:false});
+  });
+
+  // 4) 이미지/요소 드래그 차단 (드래그 앤 드롭 방지)
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, {passive:false});
+
+  // 5) 두 손가락 핀치 줌 차단 (touch-action:none으로도 대부분 막히지만 이중 안전장치)
+  document.addEventListener('touchmove', function(e){
+    if(e.touches && e.touches.length > 1){ e.preventDefault(); }
+  }, {passive:false});
+
+  // 6) 더블탭 확대(iOS Safari) 차단
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function(e){
+    var now = Date.now();
+    if(now - lastTouchEnd <= 350){ e.preventDefault(); }
+    lastTouchEnd = now;
+  }, {passive:false});
+
+  // 7) Ctrl + 마우스 휠 확대 차단 (Windows 전자칠판/노트북 대응)
+  document.addEventListener('wheel', function(e){
+    if(e.ctrlKey){ e.preventDefault(); }
+  }, {passive:false});
+
+  // 8) 단축키를 통한 확대/축소(Ctrl +/-/0) 차단
+  document.addEventListener('keydown', function(e){
+    if((e.ctrlKey||e.metaKey) && (e.key==='+'||e.key==='-'||e.key==='='||e.key==='0')){
+      e.preventDefault();
+    }
+  }, {passive:false});
+})();
+
+// =====================================================
 // SOUND MANAGER (Web Audio API synthesizer)
 // =====================================================
 var SoundMgr = (function(){
@@ -1000,7 +1152,7 @@ CurlingLane.prototype.initEvents=function(){
   var setBtns=setGrid.querySelectorAll('.set-btn');
   for(var i=0;i<setBtns.length;i++){
     (function(btn){
-      btn.addEventListener('click',function(e){
+      btn.addEventListener('pointerdown',function(e){
         e.stopPropagation();
         for(var j=0;j<setBtns.length;j++) setBtns[j].classList.remove('selected');
         btn.classList.add('selected');
@@ -1015,7 +1167,7 @@ CurlingLane.prototype.initEvents=function(){
   var stoneBtns=stoneGrid.querySelectorAll('.stone-btn');
   for(var i=0;i<stoneBtns.length;i++){
     (function(btn){
-      btn.addEventListener('click',function(e){
+      btn.addEventListener('pointerdown',function(e){
         e.stopPropagation();
         for(var j=0;j<stoneBtns.length;j++) stoneBtns[j].classList.remove('selected');
         btn.classList.add('selected');
@@ -1026,7 +1178,7 @@ CurlingLane.prototype.initEvents=function(){
   }
 
   // --- 다음 단계로 버튼 ---
-  document.getElementById('next-'+idx).addEventListener('click',function(e){
+  document.getElementById('next-'+idx).addEventListener('pointerdown',function(e){
     e.stopPropagation();
     SoundMgr.click();
     self.showDraw();
@@ -1034,7 +1186,7 @@ CurlingLane.prototype.initEvents=function(){
 
   // --- 선공 결정 버튼 ---
   var drawBtn = document.getElementById('btn-draw-'+idx);
-  drawBtn.addEventListener('click', function(e){
+  drawBtn.addEventListener('pointerdown', function(e){
     e.stopPropagation();
     drawBtn.disabled = true;
     drawBtn.style.display = 'none';
@@ -1068,7 +1220,7 @@ CurlingLane.prototype.initEvents=function(){
   });
 
   // --- 경기 시작 버튼 ---
-  document.getElementById('start-'+idx).addEventListener('click',function(e){
+  document.getElementById('start-'+idx).addEventListener('pointerdown',function(e){
     e.stopPropagation();
     SoundMgr.click();
     self.ovDraw.style.display='none';
@@ -1076,7 +1228,7 @@ CurlingLane.prototype.initEvents=function(){
   });
 
   // --- 새 경기 시작 버튼 ---
-  document.getElementById('restart-'+idx).addEventListener('click',function(e){
+  document.getElementById('restart-'+idx).addEventListener('pointerdown',function(e){
     e.stopPropagation();
     SoundMgr.click();
     self.ovWin.style.display='none';
@@ -1747,11 +1899,11 @@ CurlingLane.prototype.render=function(){
 var lanes = [];
 
 // Rules Modal
-document.getElementById('btn-show-rules').addEventListener('click', function(){
+document.getElementById('btn-show-rules').addEventListener('pointerdown', function(){
   document.getElementById('rules-modal').style.display = 'flex';
   SoundMgr.card();
 });
-document.getElementById('btn-close-rules').addEventListener('click', function(){
+document.getElementById('btn-close-rules').addEventListener('pointerdown', function(){
   document.getElementById('rules-modal').style.display = 'none';
   SoundMgr.click();
 });
@@ -1764,7 +1916,7 @@ function goHome() {
   }
 }
 
-document.getElementById('btn-home').addEventListener('click', function(e){
+document.getElementById('btn-home').addEventListener('pointerdown', function(e){
   e.stopPropagation();
   if (confirm("메인 화면으로 이동하시겠습니까? 현재 진행 중인 게임은 종료됩니다.")) {
     goHome();
@@ -1772,7 +1924,7 @@ document.getElementById('btn-home').addEventListener('click', function(e){
 });
 
 // Start Game
-document.getElementById('btn-start-normal').addEventListener('click', function(){
+document.getElementById('btn-start-normal').addEventListener('pointerdown', function(){
   document.getElementById('screen-welcome').style.display = 'none';
   for(var i=0; i<lanes.length; i++) {
     lanes[i].resetToSetup();
@@ -1782,7 +1934,7 @@ document.getElementById('btn-start-normal').addEventListener('click', function()
 });
 
 // Go to other games
-document.getElementById('btn-other-game').addEventListener('click', function(){
+document.getElementById('btn-other-game').addEventListener('pointerdown', function(){
   window.open('https://kingsmath.com', '_self');
 });
 
@@ -1810,18 +1962,27 @@ function initGame(){
 }
 
 // Resize handler
-window.addEventListener('resize',function(){
+function resizeAllLanes(){
   for(var i=0;i<lanes.length;i++) lanes[i].initCanvas();
+}
+window.addEventListener('resize', resizeAllLanes);
+window.addEventListener('orientationchange', function(){
+  resizeAllLanes();
+  setTimeout(resizeAllLanes, 250);
+  setTimeout(resizeAllLanes, 600);
 });
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', resizeAllLanes, {passive:true});
+}
 
 // Global controls
-document.getElementById('btn-sound').addEventListener('click',function(){
+document.getElementById('btn-sound').addEventListener('pointerdown',function(){
   SoundMgr.init();
   var on=SoundMgr.toggle();
   this.textContent=on?'🔊 사운드 ON':'🔇 사운드 OFF';
 });
 
-document.getElementById('btn-fs').addEventListener('click',function(){
+document.getElementById('btn-fs').addEventListener('pointerdown',function(){
   if(!document.fullscreenElement){
     document.documentElement.requestFullscreen();
     this.textContent='🖥️ 창 모드';
@@ -1835,7 +1996,7 @@ document.addEventListener('fullscreenchange',function(){
   btn.textContent=document.fullscreenElement?'🖥️ 창 모드':'🖥️ 전체화면';
 });
 
-document.getElementById('btn-reset').addEventListener('click',function(){
+document.getElementById('btn-reset').addEventListener('pointerdown',function(){
   if(confirm('모든 경기장을 초기화하시겠습니까?')){
     goHome();
   }
