@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5YW0T2C109"></script>
+<head> <script async src="https://www.googletagmanager.com/gtag/js?id=G-5YW0T2C109"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -135,13 +135,155 @@ img,canvas,svg{-webkit-user-drag:none;user-drag:none;pointer-events:auto;}
   opacity: 0.85;
   white-space: nowrap;
 }
-.score-team .team-score {
-  font-size: clamp(16px, 2.4vh, 22px);
-  font-weight: 900;
+/* ========== 점수 오버레이 (게임판 내부 중앙) ========== */
+/* ========== 점수 오버레이 — 좌상단(RED) / 우상단(YELLOW) 분리 ========== */
+/* 공통 래퍼는 더이상 사용 안 함 → 개별 배지로 분리 */
+.score-overlay { display:none; } /* 기존 통합 박스 숨김 */
+
+.so-badge {
+  position: absolute;
+  top: clamp(4px, 1vh, 8px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+  padding: clamp(2px,0.4vh,5px) clamp(6px,1vw,12px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 3px 14px rgba(0,0,0,0.6);
+  pointer-events: none;
+  line-height: 1;
+}
+.so-badge.red-badge {
+  left: clamp(4px, 1vw, 8px);
+  background: rgba(180,20,50,0.22);
+  border: 1.5px solid rgba(255,60,105,0.45);
+}
+.so-badge.yellow-badge {
+  right: clamp(4px, 1vw, 8px);
+  background: rgba(140,100,0,0.22);
+  border: 1.5px solid rgba(255,210,0,0.45);
+}
+.so-dot  { font-size: clamp(11px, 1.6vh, 16px); line-height:1; flex-shrink:0; }
+.so-num  {
   font-family: 'Outfit', sans-serif;
-  text-shadow: 0 0 10px currentColor;
-  min-width: 18px;
+  font-size: clamp(32px, 7.5vh, 72px);
+  font-weight: 900;
+  line-height: 1;
+  min-width: clamp(22px, 5vw, 52px);
   text-align: center;
+  text-shadow: 0 0 16px currentColor;
+  transition: transform 0.12s ease, color 0.15s;
+}
+.so-badge.red-badge    .so-num { color: #ff3c69; }
+.so-badge.yellow-badge .so-num { color: #ffd200; }
+.so-badge .so-label {
+  font-size: clamp(8px, 1vh, 11px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.so-badge.red-badge    .so-label { color: #ff8fa8; }
+.so-badge.yellow-badge .so-label { color: #ffe670; }
+/* 점수 변경 팝 애니메이션 */
+@keyframes scorePopR { 0%{transform:scale(1.55);color:#ff8fa8;} 100%{transform:scale(1);color:#ff3c69;} }
+@keyframes scorePopY { 0%{transform:scale(1.55);color:#ffe670;} 100%{transform:scale(1);color:#ffd200;} }
+.so-badge.red-badge    .so-num.pop { animation: scorePopR 0.35s ease-out; }
+.so-badge.yellow-badge .so-num.pop { animation: scorePopY 0.35s ease-out; }
+
+/* ========== 턴 타이머 오버레이 ========== */
+.turn-timer-ov {
+  position: absolute;
+  /* 게임판 세로 중간즈음 — 하우스 바로 위에 배치 */
+  top: 50%;
+  right: clamp(8px, 1.5vw, 16px);
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(44px, 6vw, 62px);
+  height: clamp(44px, 6vw, 62px);
+  pointer-events: none;
+}
+.timer-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg); /* 12시 방향 시작 */
+}
+.timer-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 4;
+}
+.timer-arc {
+  fill: none;
+  stroke: #00d2ff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 150.8;  /* 2π×24 */
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.9s linear, stroke 0.3s;
+}
+.timer-arc.warn {
+  stroke: #ff3c69;
+  animation: timerPulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes timerPulse { from{filter:brightness(1)} to{filter:brightness(1.8) drop-shadow(0 0 6px #ff3c69)} }
+.timer-num {
+  position: relative;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(14px, 2.4vh, 22px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(0,210,255,0.8);
+  transition: color 0.3s;
+}
+.timer-num.warn { color: #ff3c69; text-shadow: 0 0 8px rgba(255,60,105,0.9); }
+
+/* ========== lane-top 간소화 (타이틀만 중앙에) ========== */
+.lane-top {
+  justify-content: center;
+}
+.lane-title {
+  text-align: center;
+}
+
+/* ========== 파워 퍼센트 HUD (캔버스 위 절대 오버레이) ========== */
+.power-hud {
+  position: absolute;
+  bottom: 64px;   /* HUD 패널 위에 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  pointer-events: none;
+  display: none;
+}
+.power-hud.visible { display: block; }
+.power-hud-bar {
+  width: clamp(80px, 14vw, 130px);
+  height: 7px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.power-hud-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.04s linear, background 0.2s;
+}
+.power-hud-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(13px, 2.2vh, 18px);
+  font-weight: 900;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0,210,255,0.7);
+  letter-spacing: 0.5px;
 }
 .lane-title {
   font-size: clamp(8px, 1.1vh, 10px);
@@ -158,12 +300,17 @@ img,canvas,svg{-webkit-user-drag:none;user-drag:none;pointer-events:auto;}
 
 .lane-body {
   flex: 1;
-  min-height: 0; /* flex 자식이 내용에 밀려 넘치는 것을 방지 (하단 잘림 방지 핵심) */
+  min-height: 0;
   position: relative;
   overflow: hidden;
   background: linear-gradient(90deg, #0c1c3e 0%, #101f44 50%, #0c1c3e 100%);
   touch-action: none;
 }
+/* 레인별 고유 배경색 (진하고 뚜렷하게 구분) */
+#lb-0 { background: linear-gradient(160deg, #0d1e40 0%, #0a2a1a 55%, #091e38 100%); } /* 딥 네이비-그린 */
+#lb-1 { background: linear-gradient(160deg, #1a0d2e 0%, #2a0d1e 55%, #1a0818 100%); } /* 딥 퍼플-버건디 */
+#lb-2 { background: linear-gradient(160deg, #1a1200 0%, #2a1a00 55%, #1a1000 100%); } /* 딥 앰버-브라운 */
+#lb-3 { background: linear-gradient(160deg, #001a2a 0%, #001020 55%, #001a2a 100%); } /* 딥 틸-네이비 */
 .game-canvas {
   display: block;
   width: 100%;
@@ -1144,20 +1291,32 @@ h1.main-title {
   <!-- ===== LANE 0 ===== -->
   <div class="lane-wrap" id="lw-0">
     <div class="lane-top" id="lt-0">
-      <div class="score-team red">
-        <span class="team-dot">🔴</span>
-        <span class="team-name">RED</span>
-        <span class="team-score" id="score-red-0">0</span>
-      </div>
       <div class="lane-title" id="title-0">LANE 1</div>
-      <div class="score-team yellow">
-        <span class="team-score" id="score-yellow-0">0</span>
-        <span class="team-name">YELLOW</span>
-        <span class="team-dot">🟡</span>
-      </div>
     </div>
     <div class="lane-body" id="lb-0">
       <canvas id="c-0" class="game-canvas"></canvas>
+      <!-- RED 점수 (좌상단 배지) -->
+      <div class="so-badge red-badge" id="so-0">
+        <span class="so-dot">🔴</span>
+        <span class="so-num" id="score-red-0">0</span>
+        <span class="so-label">RED</span>
+      </div>
+      <!-- YELLOW 점수 (우상단 배지) -->
+      <div class="so-badge yellow-badge" id="so-y-0">
+        <span class="so-label">YLW</span>
+        <span class="so-num" id="score-yellow-0">0</span>
+        <span class="so-dot">🟡</span>
+      </div>
+      <!-- 10초 턴 타이머 오버레이 -->
+      <div class="turn-timer-ov" id="timer-ov-0" style="display:none;">
+        <svg class="timer-ring" viewBox="0 0 56 56"><circle class="timer-bg" cx="28" cy="28" r="24"/><circle class="timer-arc" id="timer-arc-0" cx="28" cy="28" r="24"/></svg>
+        <span class="timer-num" id="timer-num-0">10</span>
+      </div>
+      <!-- 파워 퍼센트 HUD -->
+      <div class="power-hud" id="phud-0">
+        <div class="power-hud-label" id="phud-pct-0">80%</div>
+        <div class="power-hud-bar"><div class="power-hud-fill" id="phud-fill-0"></div></div>
+      </div>
       <div class="sweep-zone left" id="swL-0">
         <span class="sw-icon">🧹</span>
         <span class="sw-text">좌측 비비기</span>
@@ -1216,20 +1375,28 @@ h1.main-title {
   <!-- ===== LANE 1 ===== -->
   <div class="lane-wrap" id="lw-1">
     <div class="lane-top" id="lt-1">
-      <div class="score-team red">
-        <span class="team-dot">🔴</span>
-        <span class="team-name">RED</span>
-        <span class="team-score" id="score-red-1">0</span>
-      </div>
       <div class="lane-title" id="title-1">LANE 2</div>
-      <div class="score-team yellow">
-        <span class="team-score" id="score-yellow-1">0</span>
-        <span class="team-name">YELLOW</span>
-        <span class="team-dot">🟡</span>
-      </div>
     </div>
     <div class="lane-body" id="lb-1">
       <canvas id="c-1" class="game-canvas"></canvas>
+      <div class="so-badge red-badge" id="so-1">
+        <span class="so-dot">🔴</span>
+        <span class="so-num" id="score-red-1">0</span>
+        <span class="so-label">RED</span>
+      </div>
+      <div class="so-badge yellow-badge" id="so-y-1">
+        <span class="so-label">YLW</span>
+        <span class="so-num" id="score-yellow-1">0</span>
+        <span class="so-dot">🟡</span>
+      </div>
+      <div class="turn-timer-ov" id="timer-ov-1" style="display:none;">
+        <svg class="timer-ring" viewBox="0 0 56 56"><circle class="timer-bg" cx="28" cy="28" r="24"/><circle class="timer-arc" id="timer-arc-1" cx="28" cy="28" r="24"/></svg>
+        <span class="timer-num" id="timer-num-1">10</span>
+      </div>
+      <div class="power-hud" id="phud-1">
+        <div class="power-hud-label" id="phud-pct-1">80%</div>
+        <div class="power-hud-bar"><div class="power-hud-fill" id="phud-fill-1"></div></div>
+      </div>
       <div class="sweep-zone left" id="swL-1">
         <span class="sw-icon">🧹</span>
         <span class="sw-text">좌측 비비기</span>
@@ -1283,20 +1450,28 @@ h1.main-title {
   <!-- ===== LANE 2 ===== -->
   <div class="lane-wrap" id="lw-2">
     <div class="lane-top" id="lt-2">
-      <div class="score-team red">
-        <span class="team-dot">🔴</span>
-        <span class="team-name">RED</span>
-        <span class="team-score" id="score-red-2">0</span>
-      </div>
       <div class="lane-title" id="title-2">LANE 3</div>
-      <div class="score-team yellow">
-        <span class="team-score" id="score-yellow-2">0</span>
-        <span class="team-name">YELLOW</span>
-        <span class="team-dot">🟡</span>
-      </div>
     </div>
     <div class="lane-body" id="lb-2">
       <canvas id="c-2" class="game-canvas"></canvas>
+      <div class="so-badge red-badge" id="so-2">
+        <span class="so-dot">🔴</span>
+        <span class="so-num" id="score-red-2">0</span>
+        <span class="so-label">RED</span>
+      </div>
+      <div class="so-badge yellow-badge" id="so-y-2">
+        <span class="so-label">YLW</span>
+        <span class="so-num" id="score-yellow-2">0</span>
+        <span class="so-dot">🟡</span>
+      </div>
+      <div class="turn-timer-ov" id="timer-ov-2" style="display:none;">
+        <svg class="timer-ring" viewBox="0 0 56 56"><circle class="timer-bg" cx="28" cy="28" r="24"/><circle class="timer-arc" id="timer-arc-2" cx="28" cy="28" r="24"/></svg>
+        <span class="timer-num" id="timer-num-2">10</span>
+      </div>
+      <div class="power-hud" id="phud-2">
+        <div class="power-hud-label" id="phud-pct-2">80%</div>
+        <div class="power-hud-bar"><div class="power-hud-fill" id="phud-fill-2"></div></div>
+      </div>
       <div class="sweep-zone left" id="swL-2">
         <span class="sw-icon">🧹</span>
         <span class="sw-text">좌측 비비기</span>
@@ -1350,20 +1525,28 @@ h1.main-title {
   <!-- ===== LANE 3 ===== -->
   <div class="lane-wrap" id="lw-3">
     <div class="lane-top" id="lt-3">
-      <div class="score-team red">
-        <span class="team-dot">🔴</span>
-        <span class="team-name">RED</span>
-        <span class="team-score" id="score-red-3">0</span>
-      </div>
       <div class="lane-title" id="title-3">LANE 4</div>
-      <div class="score-team yellow">
-        <span class="team-score" id="score-yellow-3">0</span>
-        <span class="team-name">YELLOW</span>
-        <span class="team-dot">🟡</span>
-      </div>
     </div>
     <div class="lane-body" id="lb-3">
       <canvas id="c-3" class="game-canvas"></canvas>
+      <div class="so-badge red-badge" id="so-3">
+        <span class="so-dot">🔴</span>
+        <span class="so-num" id="score-red-3">0</span>
+        <span class="so-label">RED</span>
+      </div>
+      <div class="so-badge yellow-badge" id="so-y-3">
+        <span class="so-label">YLW</span>
+        <span class="so-num" id="score-yellow-3">0</span>
+        <span class="so-dot">🟡</span>
+      </div>
+      <div class="turn-timer-ov" id="timer-ov-3" style="display:none;">
+        <svg class="timer-ring" viewBox="0 0 56 56"><circle class="timer-bg" cx="28" cy="28" r="24"/><circle class="timer-arc" id="timer-arc-3" cx="28" cy="28" r="24"/></svg>
+        <span class="timer-num" id="timer-num-3">10</span>
+      </div>
+      <div class="power-hud" id="phud-3">
+        <div class="power-hud-label" id="phud-pct-3">80%</div>
+        <div class="power-hud-bar"><div class="power-hud-fill" id="phud-fill-3"></div></div>
+      </div>
       <div class="sweep-zone left" id="swL-3">
         <span class="sw-icon">🧹</span>
         <span class="sw-text">좌측 비비기</span>
@@ -1561,6 +1744,22 @@ var SoundMgr = (function(){
           setTimeout(function(){tone(f,'triangle',0.25,0.1);},delay);
         })(notes[i],i*65);
       }
+    },
+    warn:function(){
+      // 3초 경고 — 날카로운 단속음 2회
+      if(!enabled||!ctx) return;
+      try{
+        var t=ctx.currentTime;
+        [0, 0.18].forEach(function(dt){
+          var o=ctx.createOscillator(), g=ctx.createGain();
+          o.type='square';
+          o.frequency.setValueAtTime(880, t+dt);
+          g.gain.setValueAtTime(0.10, t+dt);
+          g.gain.exponentialRampToValueAtTime(0.001, t+dt+0.12);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(t+dt); o.stop(t+dt+0.13);
+        });
+      }catch(e){}
     }
   };
 })();
@@ -1676,6 +1875,17 @@ function CurlingLane(idx){
   self.ovWin=document.getElementById('ov-win-'+idx);
   self.zoneL=document.getElementById('swL-'+idx);
   self.zoneR=document.getElementById('swR-'+idx);
+  // 점수 오버레이
+  self.scoreRedEl=document.getElementById('score-red-'+idx);
+  self.scoreYellowEl=document.getElementById('score-yellow-'+idx);
+  // 타이머 오버레이
+  self.timerOv=document.getElementById('timer-ov-'+idx);
+  self.timerNum=document.getElementById('timer-num-'+idx);
+  self.timerArc=document.getElementById('timer-arc-'+idx);
+  // 파워 HUD
+  self.phud=document.getElementById('phud-'+idx);
+  self.phudPct=document.getElementById('phud-pct-'+idx);
+  self.phudFill=document.getElementById('phud-fill-'+idx);
 
   // Game config
   self.totalSets=2;
@@ -1706,6 +1916,11 @@ function CurlingLane(idx){
   self.tracks=[];
   self.lastSwT=0;
   self.ptrs={};
+
+  // 턴 타이머
+  self.turnTimerSec=10;
+  self.turnTimerInterval=null;
+  self.turnTimerRunning=false;
 
   self.initCanvas();
   self.initEvents();
@@ -1741,6 +1956,71 @@ CurlingLane.prototype.setSweepZonesVisible=function(show){
   var d = show ? 'flex' : 'none';
   if(this.zoneL) this.zoneL.style.display=d;
   if(this.zoneR) this.zoneR.style.display=d;
+};
+
+// --------- 턴 타이머 ---------
+var TIMER_CIRC = 150.796; // 2π×24
+CurlingLane.prototype.startTurnTimer=function(){
+  var self=this;
+  self.stopTurnTimer();
+  self.turnTimerSec=10;
+  self.turnTimerRunning=true;
+  if(self.timerOv) self.timerOv.style.display='flex';
+  self._renderTimer();
+  self.turnTimerInterval=setInterval(function(){
+    self.turnTimerSec--;
+    self._renderTimer();
+    if(self.turnTimerSec<=3 && self.turnTimerSec>0){
+      SoundMgr.warn();
+    }
+    if(self.turnTimerSec<=0){
+      self.stopTurnTimer();
+      // 시간 초과 → 최소파워(15%)로 자동 발사 (조준 중이면)
+      if(self.state==='READY'||self.state==='AIMING'){
+        self._autoLaunch();
+      }
+    }
+  },1000);
+};
+CurlingLane.prototype.stopTurnTimer=function(){
+  var self=this;
+  self.turnTimerRunning=false;
+  if(self.turnTimerInterval){ clearInterval(self.turnTimerInterval); self.turnTimerInterval=null; }
+  if(self.timerOv) self.timerOv.style.display='none';
+  if(self.timerNum){ self.timerNum.classList.remove('warn'); }
+  if(self.timerArc){ self.timerArc.classList.remove('warn'); }
+};
+CurlingLane.prototype._renderTimer=function(){
+  var self=this;
+  var sec=Math.max(0,self.turnTimerSec);
+  if(self.timerNum) self.timerNum.textContent=sec;
+  if(self.timerArc){
+    var ratio=sec/10;
+    self.timerArc.style.strokeDashoffset=TIMER_CIRC*(1-ratio);
+  }
+  var isWarn=sec<=3;
+  if(self.timerNum){ isWarn?self.timerNum.classList.add('warn'):self.timerNum.classList.remove('warn'); }
+  if(self.timerArc){ isWarn?self.timerArc.classList.add('warn'):self.timerArc.classList.remove('warn'); }
+};
+CurlingLane.prototype._autoLaunch=function(){
+  var self=this;
+  // 조준 중이 아니면 스톤 위치로부터 정중앙을 향해 15% 파워로 직접 발사
+  if(!self.activeStone) return;
+  var maxV=self.H()*0.006949;
+  // 정중앙 하우스 방향
+  var dx=self.hX()-self.activeStone.x;
+  var dy=self.hY()-self.activeStone.y;
+  var d=Math.sqrt(dx*dx+dy*dy);
+  if(d<1) d=1;
+  self.activeStone.vx=(dx/d)*0.15*maxV;
+  self.activeStone.vy=(dy/d)*0.15*maxV;
+  self.activeStone.spin=(Math.random()-0.5)*0.04;
+  self.state='SLIDING';
+  self.setSweepZonesVisible(true);
+  self.thrown[self.turn]++;
+  SoundMgr.click();
+  self.aimStart=null; self.aimPt=null;
+  if(self.phud) self.phud.classList.remove('visible');
 };
 
 CurlingLane.prototype.initEvents=function(){
@@ -1910,6 +2190,22 @@ CurlingLane.prototype.onPtrMove=function(e){
   var c=this.getCoords(e);
   if(this.state==='AIMING'){
     this.aimPt={x:c.x,y:c.y};
+    // 파워 퍼센트 HUD 업데이트
+    if(this.aimStart){
+      var dx=this.aimStart.x-c.x, dy=this.aimStart.y-c.y;
+      var d=Math.sqrt(dx*dx+dy*dy);
+      var pct=Math.min(Math.round(d/110*100),100);
+      if(this.phud){
+        this.phud.classList.add('visible');
+        this.phudPct.textContent=pct+'%';
+        this.phudFill.style.width=pct+'%';
+        // 색상: 낮음=파랑, 중간=노랑, 높음=빨강
+        var col=pct<40?'#00d2ff':pct<75?'#ffd200':'#ff3c69';
+        this.phudFill.style.background=col;
+        this.phudPct.style.color=col;
+        this.phudPct.style.textShadow='0 0 10px '+col;
+      }
+    }
   } else if(this.state==='SLIDING'){
     var prev=this.ptrs[e.pointerId];
     var now=performance.now();
@@ -1936,6 +2232,7 @@ CurlingLane.prototype.onPtrUp=function(e){
   delete this.ptrs[e.pointerId];
   if(this.state==='AIMING'){
     this.launch();
+    if(this.phud) this.phud.classList.remove('visible');
   } else if(this.state==='SLIDING'){
     this.swBtnL=false; this.swBtnR=false;
     if(this.zoneL) {
@@ -1955,17 +2252,35 @@ CurlingLane.prototype.launch=function(){
   var dy=this.aimStart.y-this.aimPt.y;
   var d=Math.sqrt(dx*dx+dy*dy);
   if(d<8){ this.state='READY'; return; }
-  var intensity=Math.min(d/110,1.0);
+  // 80% 드래그 = 정중앙(하우스) 도달 파워로 보정
+  // maxDrag=110 기준 100%=maxV. 정중앙까지의 물리 계산으로 이상적 속도를 산출하고
+  // 80% 입력이 그 속도에 대응하도록 스케일 조정.
+  // 목표: intensity=0.8 → 하우스 중심 도달
+  // 마찰: friction^n * v0 → v=0 일 때 x = v0 / (1-friction) × (1-friction^n) ≈ v0/(1-friction)
+  // 단순화: 80%가 hackY→hY 거리를 커버하는 속도
+  var hackToHouse=Math.abs(this.hackY()-this.hY());
   var maxV=this.H()*0.006949;
+  // 80% 드래그(intensity=0.8)로 하우스 중심 도달하도록 maxV 재산출
+  // v0 = maxV * intensity; x_stop ≈ v0 / (1 - friction)
+  // 목표: 0.8 * maxV / (1 - friction) = hackToHouse
+  // maxV_tuned = hackToHouse * (1 - friction) / 0.8
+  var tuned_maxV = hackToHouse * (1 - this.friction) / 0.8;
+  // 실제 maxV와 가중평균: 너무 느려지지 않도록 보정값 적용
+  var effectiveMaxV = tuned_maxV * 1.18;  // 약간 여유 (벽 튕김 등 손실 보상)
+
+  var intensity=Math.min(d/110, 1.0);
   var angle=Math.atan2(dy,dx);
-  this.activeStone.vx=Math.cos(angle)*intensity*maxV;
-  this.activeStone.vy=Math.sin(angle)*intensity*maxV;
+  this.activeStone.vx=Math.cos(angle)*intensity*effectiveMaxV;
+  this.activeStone.vy=Math.sin(angle)*intensity*effectiveMaxV;
   this.activeStone.spin=(Math.random()-0.5)*0.08;
   this.state='SLIDING';
   this.setSweepZonesVisible(true);
   this.thrown[this.turn]++;
   SoundMgr.click();
   this.aimStart=null; this.aimPt=null;
+  // 타이머/파워HUD 숨기기
+  this.stopTurnTimer();
+  if(this.phud) this.phud.classList.remove('visible');
 };
 
 CurlingLane.prototype.applySweep=function(isLeft,spd,px,py){
@@ -2037,6 +2352,7 @@ CurlingLane.prototype.resetSet=function(){
   this.spawnStone();
   this.state='READY';
   this.updateHeader();
+  this.startTurnTimer();
 };
 
 CurlingLane.prototype.spawnStone=function(){
@@ -2053,14 +2369,23 @@ CurlingLane.prototype.updateHeader=function(){
   if(self.state==='READY'||self.state==='AIMING'||self.state==='SLIDING'){
     self.laneWrap.classList.add('turn-'+self.turn);
   }
-  
-  // 상단 스코어보드 값 연동 (왼쪽 레드, 오른쪽 옐로우)
-  var redScoreEl = document.getElementById('score-red-' + self.idx);
-  var yellowScoreEl = document.getElementById('score-yellow-' + self.idx);
+
+  // 점수 오버레이 업데이트 (팝 애니메이션)
+  function setScore(el, val, popClass){
+    if(!el) return;
+    var prev=parseInt(el.textContent)||0;
+    el.textContent=val;
+    if(val!==prev){
+      el.classList.remove(popClass);
+      void el.offsetWidth; // reflow
+      el.classList.add(popClass);
+      setTimeout(function(){ el.classList.remove(popClass); },380);
+    }
+  }
+  setScore(self.scoreRedEl, self.scores.red, 'pop');
+  setScore(self.scoreYellowEl, self.scores.yellow, 'pop');
+
   var titleEl = document.getElementById('title-' + self.idx);
-  
-  if(redScoreEl) redScoreEl.textContent = self.scores.red;
-  if(yellowScoreEl) yellowScoreEl.textContent = self.scores.yellow;
   if(titleEl) {
     var setStr = self.isExtraEnd ? '연장전' : 'SET ' + self.currentSet + '/' + self.totalSets;
     titleEl.textContent = 'LANE ' + (self.idx + 1) + ' (' + setStr + ')';
@@ -2068,6 +2393,8 @@ CurlingLane.prototype.updateHeader=function(){
 };
 
 CurlingLane.prototype.resetToSetup=function(){
+  this.stopTurnTimer();
+  if(this.phud) this.phud.classList.remove('visible');
   this.state='SETUP';
   this.stones=[];
   this.activeStone=null;
@@ -2177,7 +2504,9 @@ CurlingLane.prototype.afterStoneStops=function(){
     this.turn=(this.turn==='red'?'yellow':'red');
     this.state='READY';
     this.spawnStone();
+    this.startTurnTimer();
   } else {
+    this.stopTurnTimer();
     this.state='END_SET';
     var self=this;
     setTimeout(function(){ self.calcScore(); },1200);
@@ -2269,6 +2598,21 @@ CurlingLane.prototype.render=function(){
   var ctx=self.ctx;
   var W=self.W(), H=self.H();
   ctx.clearRect(0,0,W,H);
+
+  // 레인별 고유 배경색 (CSS #lb-N 배경과 동일 팔레트)
+  var laneBg=[
+    ['#0a1e12','#0d2a1a','#081830'],  // LANE 0: 딥 네이비-그린
+    ['#160824','#220a18','#130614'],  // LANE 1: 딥 퍼플-버건디
+    ['#181000','#221400','#180e00'],  // LANE 2: 딥 앰버-브라운
+    ['#001624','#00101e','#001824']   // LANE 3: 딥 틸-네이비
+  ];
+  var bg=laneBg[self.idx]||laneBg[0];
+  var grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,bg[0]);
+  grad.addColorStop(0.5,bg[1]);
+  grad.addColorStop(1,bg[2]);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
 
 
 
