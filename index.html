@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컬링킹</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+/* ========== 리셋 & 기본 ========== */
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Outfit','Noto Sans KR',sans-serif;background:#05091a;color:#fff;overflow:hidden;width:100vw;height:100vh;}
+
+/* ========== 헤더 ========== */
+#header{
+  height:60px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+  background:rgba(8,14,38,0.92);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  position:relative;z-index:200;
+}
+#header .logo{display:flex;align-items:center;gap:10px;}
+#header .logo-icon{font-size:26px;filter:drop-shadow(0 0 8px #00d2ff);}
+#header .logo-text{
+  font-size:18px;font-weight:800;
+  background:linear-gradient(90deg,#fff,#00d2ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:-0.3px;
+}
+#header .logo-sub{font-size:10px;font-weight:400;color:#668;letter-spacing:1px;margin-top:-2px;-webkit-text-fill-color:#668;}
+#header .ctrl-group{display:flex;gap:10px;}
+.ctrl-btn{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
+  color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:6px;
+}
+.ctrl-btn:hover{background:rgba(255,255,255,0.12);transform:translateY(-1px);}
+.ctrl-btn:active{transform:translateY(1px);}
+.ctrl-btn.danger{background:rgba(255,60,105,0.12);border-color:rgba(255,60,105,0.3);}
+.ctrl-btn.danger:hover{background:rgba(255,60,105,0.25);box-shadow:0 0 12px rgba(255,60,105,0.25);}
+
+/* ========== 레인 그리드 ========== */
+#lanes{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  height:100%;width:100%;
+}
+.lane-wrap{
+  display:flex;flex-direction:column;
+  border-right:1px solid rgba(255,255,255,0.07);
+  position:relative;overflow:hidden;
+}
+.lane-wrap:last-child{border-right:none;}
+.lane-top {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: rgba(8, 14, 38, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 100;
+}
+.lane-wrap.turn-red .lane-top { border-bottom-color: rgba(255,60,105,0.45); }
+.lane-wrap.turn-yellow .lane-top { border-bottom-color: rgba(255,210,0,0.45); }
+.score-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.score-team.red {
+  color: #ff3c69;
+}
+.score-team.yellow {
+  color: #ffd200;
+}
+.score-team .team-dot {
+  font-size: 13px;
+}
+.score-team .team-name {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+.score-team .team-score {
+  font-size: 22px;
+  font-weight: 900;
+  font-family: 'Outfit', sans-serif;
+  text-shadow: 0 0 10px currentColor;
+  min-width: 18px;
+  text-align: center;
+}
+.lane-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #8fa0c0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.lane-body {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(90deg, #0c1c3e 0%, #101f44 50%, #0c1c3e 100%);
+}
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+}
+
+/* ========== 스위핑(비비기) 패드 ========== */
+@keyframes hand-wave {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(-15deg) scale(1.15); }
+  30% { transform: rotate(10deg) scale(1.15); }
+  45% { transform: rotate(-10deg) scale(1.15); }
+  60% { transform: rotate(5deg) scale(1.15); }
+  75% { transform: rotate(-5deg) scale(1.15); }
+  100% { transform: rotate(0deg); }
+}
+.sweep-zone {
+  position: absolute;
+  top: 62%;
+  bottom: 58px;
+  width: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(4px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  z-index: 5;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  touch-action: none;
+}
+.sweep-zone .sw-icon {
+  font-size: 32px;
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: hand-wave 1.2s infinite ease-in-out;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.2));
+}
+.sweep-zone.left {
+  left: 0;
+  border-right: 1px dashed rgba(255, 255, 255, 0.08);
+  border-top-left-radius: 16px;
+}
+.sweep-zone.right {
+  right: 0;
+  border-top-right-radius: 16px;
+}
+.sweep-zone.on {
+  transform: scale(0.98);
+}
+.sweep-zone.glow-red {
+  background: radial-gradient(circle at center, rgba(255, 60, 105, 0.22) 0%, rgba(255, 60, 105, 0.04) 100%);
+  border-top-color: rgba(255, 60, 105, 0.6);
+  box-shadow: inset 0 0 25px rgba(255, 60, 105, 0.3);
+  color: #ff3c69;
+  text-shadow: 0 0 10px rgba(255, 60, 105, 0.5);
+}
+.sweep-zone.glow-yellow {
+  background: radial-gradient(circle at center, rgba(255, 210, 0, 0.22) 0%, rgba(255, 210, 0, 0.04) 100%);
+  border-top-color: rgba(255, 210, 0, 0.6);
+  box-shadow: inset 0 0 25px rgba(255, 210, 0, 0.3);
+  color: #ffd200;
+  text-shadow: 0 0 10px rgba(255, 210, 0, 0.5);
+}
+
+/* ========== 오버레이 공통 ========== */
+.lane-ov{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:rgba(3,7,20,0.78);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:12px;
+  animation:fadeIn 0.35s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.ov-card{
+  width:100%;max-width:300px;
+  background:rgba(20,35,75,0.65);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:18px;padding:20px 18px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,0.5),0 0 30px rgba(0,210,255,0.04);
+}
+.ov-title{font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
+.ov-desc{font-size:12px;color:#7080a0;text-align:center;line-height:1.5;}
+
+/* ========== 세트/스톤 수 선택 ========== */
+.set-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.stone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;}
+.set-btn, .stone-btn{
+  background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.15);
+  color:#fff;padding:11px 8px;border-radius:10px;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all 0.2s ease;font-family:inherit;
+}
+.set-btn:hover, .stone-btn:hover{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);transform:translateY(-1px);}
+.set-btn:active, .stone-btn:active{transform:scale(0.95);}
+.set-btn.selected, .stone-btn.selected{
+  background:linear-gradient(135deg,#00d2ff,#0055ff);
+  border-color:#00d2ff;
+  box-shadow:0 0 12px rgba(0,210,255,0.4);
+  color:#fff;
+}
+
+/* ========== 공통 버튼 ========== */
+.action-btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  background:linear-gradient(90deg,#00d2ff,#0055ff);
+  color:#fff;font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,80,255,0.28);
+  transition:all 0.18s;font-family:inherit;
+}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,80,255,0.4);}
+.action-btn:active{transform:translateY(1px);}
+.action-btn.green{background:linear-gradient(90deg,#10b981,#059669);box-shadow:0 4px 14px rgba(16,185,129,0.25);}
+.action-btn.green:hover{box-shadow:0 6px 18px rgba(16,185,129,0.4);}
+
+.draw-result{min-height:22px;font-size:14px;font-weight:700;text-align:center;}
+.draw-result.red{color:#ff3c69;text-shadow:0 0 8px rgba(255,60,105,0.3);}
+.draw-result.yellow{color:#ffd200;text-shadow:0 0 8px rgba(255,210,0,0.3);}
+
+/* ========== 승리 화면 ========== */
+.trophy{font-size:52px;animation:bobble 1.6s infinite alternate ease-in-out;}
+@keyframes bobble{from{transform:translateY(0) scale(1);}to{transform:translateY(-8px) scale(1.06);}}
+.win-title{font-size:17px;font-weight:900;text-align:center;}
+.win-title.red-won{color:#ff3c69;text-shadow:0 0 12px rgba(255,60,105,0.4);}
+.win-title.yellow-won{color:#ffd200;text-shadow:0 0 12px rgba(255,210,0,0.4);}
+.win-score{font-size:13px;color:#7080a0;}
+
+/* ========== 웰컴 화면 ========== */
+.screen-welcome {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 1000;
+  background: radial-gradient(ellipse at 40% 0%, #0d1e40 0%, #091530 45%, #050a18 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  overflow-y: auto;
+  font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+}
+.welcome-container {
+  background: rgba(4, 9, 25, 0.90);
+  backdrop-filter: blur(20px);
+  padding: 2.2rem 2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  box-shadow: 0 0 50px rgba(0, 176, 255, 0.12), 0 30px 70px rgba(0,0,0,0.85);
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  position: relative;
+  animation: fadeInWelcome 0.45s ease-out;
+}
+@keyframes fadeInWelcome {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.crown-deco {
+  font-size: 2.5rem;
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+  animation: crownBob 2.8s ease-in-out infinite;
+}
+@keyframes crownBob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
+}
+h1.main-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin-bottom: 0.1rem;
+  color: #ffd200;
+  text-shadow: 0 0 15px rgba(255, 210, 0, 0.35);
+  line-height: 1.1;
+}
+.subtitle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0.4rem 0 1.2rem;
+}
+.subtitle-deco-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.4), transparent);
+}
+.subtitle {
+  color: #889ec4;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+.options-panel {
+  width: 100%;
+  animation: slideUpWelcome 0.3s ease-out;
+}
+@keyframes slideUpWelcome {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.btn-start {
+  background: linear-gradient(135deg, #0091ea 0%, #00b0ff 55%, #40c4ff 100%);
+  color: white; border: none; padding: 0.75rem 2rem; font-size: 0.95rem;
+  border-radius: 100px; cursor: pointer; font-weight: 800; transition: all 0.25s; width: 100%;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 20px rgba(0, 176, 255, 0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+  margin-top: 10px;
+  font-family: inherit;
+}
+.btn-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 176, 255, 0.55), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.btn-no-tournament {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%);
+  color: white; border: none; padding: 0.75rem 2rem; font-size: 0.95rem;
+  border-radius: 100px; cursor: pointer; font-weight: 800; transition: all 0.25s; width: 100%;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 20px rgba(13,148,136,0.4), inset 0 1px 0 rgba(255,255,255,0.18);
+  margin-top: 10px;
+  font-family: inherit;
+}
+.btn-no-tournament:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(13,148,136,0.55), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+/* ========== 게임장 레이아웃 ========== */
+#game-container {
+  height: calc(100vh - 60px);
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ========== 모달 오버레이 ========== */
+.game-modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+}
+.game-modal-box {
+  background: #0b1224; border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 20px; padding: 2rem; max-width: 440px; width: 90%;
+  text-align: center; box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+}
+.rules-content p {
+  margin-bottom: 12px;
+}
+
+/* ========== 반응형 ========== */
+@media(max-width:900px){
+  #lanes{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== 헤더 ========== -->
+<div id="header">
+  <div class="logo">
+    <span class="logo-icon">🥌</span>
+    <div>
+      <div class="logo-text">컬링킹</div>
+      <div class="logo-sub">CURLING KING</div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <button class="ctrl-btn" id="btn-home">🏠 홈으로</button>
+    <button class="ctrl-btn" id="btn-sound">🔊 사운드 ON</button>
+    <button class="ctrl-btn" id="btn-fs">🖥️ 전체화면</button>
+    <button class="ctrl-btn danger" id="btn-reset">🔄 전체 리셋</button>
+  </div>
+</div>
+
+<!-- ========== 웰컴 화면 ========== -->
+<div id="screen-welcome" class="screen-welcome">
+  <div class="welcome-container">
+    <span class="crown-deco">🥌</span>
+    <h1 class="main-title">컬링킹</h1>
+    <div class="subtitle-wrapper">
+      <span class="subtitle-deco-line"></span>
+      <div class="subtitle">4개 경기장에서 즐기는 1:1 컬링 게임</div>
+      <span class="subtitle-deco-line"></span>
+    </div>
+
+    <div class="options-panel">
+      <button class="btn-start" id="btn-show-rules" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 55%, #5b21b6 100%); box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);">📖 게임 설명</button>
+      <button class="btn-no-tournament" id="btn-start-normal">🎮 게임 시작</button>
+      <button class="btn-start" id="btn-other-game" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 55%, #b45309 100%); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);">🔗 다른 게임 고르기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 컬링 경기 규칙 설명 모달 ========== -->
+<div id="rules-modal" class="game-modal-overlay" style="display:none;">
+    <div class="game-modal-box" style="text-align: left; padding: 25px;">
+        <h2 style="color: #ffd200; font-size: 22px; text-align: center; margin-bottom: 15px;">🥌 컬링 경기 규칙 및 방법</h2>
+        <div class="rules-content" style="font-size: 13px; color: #d0d6e2; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+            <p><strong style="color: #00e5ff; font-size: 14px;">1. 경기 방식 및 선공</strong><br>
+            - 경기가 시작되면 동전 던지기(선공 추첨)를 통해 선공과 후공을 정합니다.<br>
+            - 컬링은 후공(마지막 돌을 던지는 해머 권한)이 절대적으로 유리하므로, 선공 추첨이 매우 중요합니다.</p>
+
+            <p><strong style="color: #00e5ff; font-size: 14px;">2. 스톤 투척 및 호그라인</strong><br>
+            - 출발선(Hack)에서 스톤을 조준하여 뒤로 당겼다 놓아 투척합니다.<br>
+            - 스톤이 **호그라인(Hog Line)**을 완전히 넘어가야 유효하며, 넘어가지 못하거나 경기장 좌우 측벽으로 이탈하면 무효(제거) 처리됩니다.</p>
+
+            <p><strong style="color: #00e5ff; font-size: 14px;">3. 스위핑(빗질) 조작</strong><br>
+            - 스톤이 호그라인을 넘은 후 미끄러질 때, 화면 하단의 **좌/우 비비기 패드(👋)**를 문지르거나 터치하면 빗질이 가동됩니다.<br>
+            - 스위핑을 하면 빙판 마찰력이 줄어들어 **스톤이 더 멀리 가며, 진행 방향을 미세하게 좌우로 조절(꺾기)**할 수 있습니다.</p>
+
+            <p><strong style="color: #00e5ff; font-size: 14px;">4. 득점 계산법</strong><br>
+            - 모든 스톤을 다 던진 후 **하우스(원) 중심에 가장 가까운 스톤을 놓은 팀만 해당 엔드(세트)에서 득점**할 수 있습니다.<br>
+            - 이긴 팀은 상대팀의 가장 가까운 스톤보다 하우스 중심에 더 가까이 붙인 스톤의 개수당 **1점씩** 얻습니다.<br>
+            - 진 팀은 해당 엔드에서 0점을 얻습니다.</p>
+
+            <p><strong style="color: #00e5ff; font-size: 14px;">5. 동점 시 룰 (추가 단판 엔드)</strong><br>
+            - 설정된 엔드가 끝났을 때 합계 점수가 동점이라면, 승부를 가리기 위해 **단판 승부 추가 엔드(익스트라 엔드)**를 딱 1회만 진행하여 최종 우승팀을 가립니다.</p>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button class="action-btn green" style="width: 100%; cursor: pointer;" id="btn-close-rules">확인 완료</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== 경기장 레이아웃 컨테이너 ========== -->
+<div id="game-container">
+  <div id="lanes">
+
+  <!-- ===== LANE 0 ===== -->
+  <div class="lane-wrap" id="lw-0">
+    <div class="lane-top" id="lt-0">
+      <div class="score-team red">
+        <span class="team-dot">🔴</span>
+        <span class="team-name">RED</span>
+        <span class="team-score" id="score-red-0">0</span>
+      </div>
+      <div class="lane-title" id="title-0">LANE 1</div>
+      <div class="score-team yellow">
+        <span class="team-score" id="score-yellow-0">0</span>
+        <span class="team-name">YELLOW</span>
+        <span class="team-dot">🟡</span>
+      </div>
+    </div>
+    <div class="lane-body" id="lb-0">
+      <canvas id="c-0" class="game-canvas"></canvas>
+      <div class="sweep-zone left" id="swL-0">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">좌측 비비기</span>
+      </div>
+      <div class="sweep-zone right" id="swR-0">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">우측 비비기</span>
+      </div>
+
+      <!-- 세트 설정 -->
+      <div class="lane-ov" id="ov-setup-0">
+        <div class="ov-card">
+          <div class="ov-title">⚙️ 경기 설정</div>
+          <p class="ov-desc">진행할 엔드(세트) 수와 스톤 수를 선택하세요.</p>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">진행 엔드 수</div>
+          <div class="set-grid">
+            <button class="set-btn selected" data-n="2">2</button>
+            <button class="set-btn" data-n="4">4</button>
+            <button class="set-btn" data-n="6">6</button>
+          </div>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">팀당 스톤 수</div>
+          <div class="stone-grid">
+            <button class="stone-btn selected" data-s="4">4</button>
+            <button class="stone-btn" data-s="5">5</button>
+            <button class="stone-btn" data-s="6">6</button>
+          </div>
+          <button class="action-btn" id="next-0" style="margin-top: 10px;">다음 단계로 ▶</button>
+        </div>
+      </div>
+
+      <!-- 선공 결정 -->
+      <div class="lane-ov" id="ov-draw-0" style="display:none">
+        <div class="ov-card">
+          <div class="ov-title">🥌 선공 결정</div>
+          <p class="ov-desc">버튼을 눌러 선공 팀을 추첨하세요.</p>
+          <button class="action-btn" id="btn-draw-0">선공 결정하기 🎲</button>
+          <div class="draw-result" id="dr-0"></div>
+          <button class="action-btn green" id="start-0" style="display:none">경기 시작 ▶</button>
+        </div>
+      </div>
+
+      <!-- 승리 -->
+      <div class="lane-ov" id="ov-win-0" style="display:none">
+        <div class="ov-card">
+          <div class="trophy">🏆</div>
+          <div class="win-title" id="wt-0"></div>
+          <div class="win-score" id="ws-0"></div>
+          <button class="action-btn green" id="restart-0">새 경기 시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LANE 1 ===== -->
+  <div class="lane-wrap" id="lw-1">
+    <div class="lane-top" id="lt-1">
+      <div class="score-team red">
+        <span class="team-dot">🔴</span>
+        <span class="team-name">RED</span>
+        <span class="team-score" id="score-red-1">0</span>
+      </div>
+      <div class="lane-title" id="title-1">LANE 2</div>
+      <div class="score-team yellow">
+        <span class="team-score" id="score-yellow-1">0</span>
+        <span class="team-name">YELLOW</span>
+        <span class="team-dot">🟡</span>
+      </div>
+    </div>
+    <div class="lane-body" id="lb-1">
+      <canvas id="c-1" class="game-canvas"></canvas>
+      <div class="sweep-zone left" id="swL-1">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">좌측 비비기</span>
+      </div>
+      <div class="sweep-zone right" id="swR-1">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">우측 비비기</span>
+      </div>
+      <!-- 세트 설정 -->
+      <div class="lane-ov" id="ov-setup-1">
+        <div class="ov-card">
+          <div class="ov-title">⚙️ 경기 설정</div>
+          <p class="ov-desc">진행할 엔드(세트) 수와 스톤 수를 선택하세요.</p>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">진행 엔드 수</div>
+          <div class="set-grid">
+            <button class="set-btn selected" data-n="2">2</button>
+            <button class="set-btn" data-n="4">4</button>
+            <button class="set-btn" data-n="6">6</button>
+          </div>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">팀당 스톤 수</div>
+          <div class="stone-grid">
+            <button class="stone-btn selected" data-s="4">4</button>
+            <button class="stone-btn" data-s="5">5</button>
+            <button class="stone-btn" data-s="6">6</button>
+          </div>
+          <button class="action-btn" id="next-1" style="margin-top: 10px;">다음 단계로 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-draw-1" style="display:none">
+        <div class="ov-card">
+          <div class="ov-title">🥌 선공 결정</div>
+          <p class="ov-desc">버튼을 눌러 선공 팀을 추첨하세요.</p>
+          <button class="action-btn" id="btn-draw-1">선공 결정하기 🎲</button>
+          <div class="draw-result" id="dr-1"></div>
+          <button class="action-btn green" id="start-1" style="display:none">경기 시작 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-win-1" style="display:none">
+        <div class="ov-card">
+          <div class="trophy">🏆</div>
+          <div class="win-title" id="wt-1"></div>
+          <div class="win-score" id="ws-1"></div>
+          <button class="action-btn green" id="restart-1">새 경기 시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LANE 2 ===== -->
+  <div class="lane-wrap" id="lw-2">
+    <div class="lane-top" id="lt-2">
+      <div class="score-team red">
+        <span class="team-dot">🔴</span>
+        <span class="team-name">RED</span>
+        <span class="team-score" id="score-red-2">0</span>
+      </div>
+      <div class="lane-title" id="title-2">LANE 3</div>
+      <div class="score-team yellow">
+        <span class="team-score" id="score-yellow-2">0</span>
+        <span class="team-name">YELLOW</span>
+        <span class="team-dot">🟡</span>
+      </div>
+    </div>
+    <div class="lane-body" id="lb-2">
+      <canvas id="c-2" class="game-canvas"></canvas>
+      <div class="sweep-zone left" id="swL-2">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">좌측 비비기</span>
+      </div>
+      <div class="sweep-zone right" id="swR-2">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">우측 비비기</span>
+      </div>
+      <!-- 세트 설정 -->
+      <div class="lane-ov" id="ov-setup-2">
+        <div class="ov-card">
+          <div class="ov-title">⚙️ 경기 설정</div>
+          <p class="ov-desc">진행할 엔드(세트) 수와 스톤 수를 선택하세요.</p>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">진행 엔드 수</div>
+          <div class="set-grid">
+            <button class="set-btn selected" data-n="2">2</button>
+            <button class="set-btn" data-n="4">4</button>
+            <button class="set-btn" data-n="6">6</button>
+          </div>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">팀당 스톤 수</div>
+          <div class="stone-grid">
+            <button class="stone-btn selected" data-s="4">4</button>
+            <button class="stone-btn" data-s="5">5</button>
+            <button class="stone-btn" data-s="6">6</button>
+          </div>
+          <button class="action-btn" id="next-2" style="margin-top: 10px;">다음 단계로 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-draw-2" style="display:none">
+        <div class="ov-card">
+          <div class="ov-title">🥌 선공 결정</div>
+          <p class="ov-desc">버튼을 눌러 선공 팀을 추첨하세요.</p>
+          <button class="action-btn" id="btn-draw-2">선공 결정하기 🎲</button>
+          <div class="draw-result" id="dr-2"></div>
+          <button class="action-btn green" id="start-2" style="display:none">경기 시작 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-win-2" style="display:none">
+        <div class="ov-card">
+          <div class="trophy">🏆</div>
+          <div class="win-title" id="wt-2"></div>
+          <div class="win-score" id="ws-2"></div>
+          <button class="action-btn green" id="restart-2">새 경기 시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LANE 3 ===== -->
+  <div class="lane-wrap" id="lw-3">
+    <div class="lane-top" id="lt-3">
+      <div class="score-team red">
+        <span class="team-dot">🔴</span>
+        <span class="team-name">RED</span>
+        <span class="team-score" id="score-red-3">0</span>
+      </div>
+      <div class="lane-title" id="title-3">LANE 4</div>
+      <div class="score-team yellow">
+        <span class="team-score" id="score-yellow-3">0</span>
+        <span class="team-name">YELLOW</span>
+        <span class="team-dot">🟡</span>
+      </div>
+    </div>
+    <div class="lane-body" id="lb-3">
+      <canvas id="c-3" class="game-canvas"></canvas>
+      <div class="sweep-zone left" id="swL-3">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">좌측 비비기</span>
+      </div>
+      <div class="sweep-zone right" id="swR-3">
+        <span class="sw-icon">🧹</span>
+        <span class="sw-text">우측 비비기</span>
+      </div>
+      <!-- 세트 설정 -->
+      <div class="lane-ov" id="ov-setup-3">
+        <div class="ov-card">
+          <div class="ov-title">⚙️ 경기 설정</div>
+          <p class="ov-desc">진행할 엔드(세트) 수와 스톤 수를 선택하세요.</p>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">진행 엔드 수</div>
+          <div class="set-grid">
+            <button class="set-btn selected" data-n="2">2</button>
+            <button class="set-btn" data-n="4">4</button>
+            <button class="set-btn" data-n="6">6</button>
+          </div>
+
+          <div class="setup-section-title" style="font-size: 11px; color: #889ec4; margin: 6px 0 6px; font-weight: bold; align-self: flex-start;">팀당 스톤 수</div>
+          <div class="stone-grid">
+            <button class="stone-btn selected" data-s="4">4</button>
+            <button class="stone-btn" data-s="5">5</button>
+            <button class="stone-btn" data-s="6">6</button>
+          </div>
+          <button class="action-btn" id="next-3" style="margin-top: 10px;">다음 단계로 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-draw-3" style="display:none">
+        <div class="ov-card">
+          <div class="ov-title">🥌 선공 결정</div>
+          <p class="ov-desc">버튼을 눌러 선공 팀을 추첨하세요.</p>
+          <button class="action-btn" id="btn-draw-3">선공 결정하기 🎲</button>
+          <div class="draw-result" id="dr-3"></div>
+          <button class="action-btn green" id="start-3" style="display:none">경기 시작 ▶</button>
+        </div>
+      </div>
+      <div class="lane-ov" id="ov-win-3" style="display:none">
+        <div class="ov-card">
+          <div class="trophy">🏆</div>
+          <div class="win-title" id="wt-3"></div>
+          <div class="win-score" id="ws-3"></div>
+          <button class="action-btn green" id="restart-3">새 경기 시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- #lanes -->
+</div><!-- #game-container -->
+
+<script>
+// =====================================================
+// SOUND MANAGER (Web Audio API synthesizer)
+// =====================================================
+var SoundMgr = (function(){
+  var ctx = null;
+  var noiseBuffer = null;
+  var enabled = true;
+
+  function init(){
+    if(ctx) return;
+    try{
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+      var len = ctx.sampleRate * 2;
+      noiseBuffer = ctx.createBuffer(1,len,ctx.sampleRate);
+      var d = noiseBuffer.getChannelData(0);
+      for(var i=0;i<len;i++) d[i]=Math.random()*2-1;
+    }catch(e){}
+  }
+
+  function tone(freq,type,dur,vol){
+    if(!enabled||!ctx) return;
+    try{
+      var o=ctx.createOscillator(), g=ctx.createGain();
+      o.type=type||'sine';
+      o.frequency.setValueAtTime(freq,ctx.currentTime);
+      g.gain.setValueAtTime(vol||0.1,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime+dur+0.01);
+    }catch(e){}
+  }
+
+  return {
+    init:init,
+    toggle:function(){ enabled=!enabled; return enabled; },
+    isOn:function(){ return enabled; },
+    click:function(){ tone(700,'sine',0.07,0.1); },
+    pyong:function(){
+      if(!enabled||!ctx) return;
+      try{
+        var o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine';
+        o.frequency.setValueAtTime(220,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(800,ctx.currentTime+0.12);
+        g.gain.setValueAtTime(0.08,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime+0.13);
+      }catch(e){}
+    },
+    card:function(){ tone(420,'triangle',0.14,0.12); },
+    collision:function(spd){
+      var v=Math.min(1,spd/10);
+      tone(130,'sine',0.14,v*0.3);
+      tone(260,'triangle',0.07,v*0.2);
+    },
+    sweep:function(str){
+      if(!enabled||!ctx||!noiseBuffer) return;
+      try{
+        var src=ctx.createBufferSource();
+        src.buffer=noiseBuffer;
+        var flt=ctx.createBiquadFilter();
+        flt.type='highpass'; flt.frequency.value=1400;
+        var g=ctx.createGain();
+        var v=Math.min(0.04,str*0.03);
+        g.gain.setValueAtTime(v,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.18);
+        src.connect(flt); flt.connect(g); g.connect(ctx.destination);
+        src.start(0); src.stop(ctx.currentTime+0.2);
+      }catch(e){}
+    },
+    win:function(){
+      var notes=[262,330,392,523,659,784,1047];
+      for(var i=0;i<notes.length;i++){
+        (function(f,delay){
+          setTimeout(function(){tone(f,'triangle',0.25,0.1);},delay);
+        })(notes[i],i*65);
+      }
+    }
+  };
+})();
+
+// =====================================================
+// STONE CLASS
+// =====================================================
+function Stone(x,y,r,color,id){
+  this.x=x; this.y=y;
+  this.vx=0; this.vy=0;
+  this.r=r; this.color=color; this.id=id;
+  this.active=true;
+  this.spin=0;
+  this.angle=Math.random()*Math.PI*2;
+  this.fMod=1.0; // friction modifier (sweeping reduces it)
+}
+Stone.prototype.isMoving=function(){
+  return Math.sqrt(this.vx*this.vx+this.vy*this.vy)>0.1;
+};
+Stone.prototype.update=function(friction,W,H){
+  if(!this.active) return;
+  this.x+=this.vx;
+  this.y+=this.vy;
+  this.angle+=this.spin+this.vx*0.015;
+  this.spin*=0.97;
+  // Apply friction
+  var eff=1-(1-friction)*this.fMod;
+  this.vx*=eff; this.vy*=eff;
+  this.fMod=1.0; // reset
+  // 이탈 처리 (벽에 튕기지 않고 화면 밖으로 완전히 빠져나가면 비활성화)
+  if(this.x+this.r<0 || this.x-this.r>W || this.y+this.r<0 || this.y-this.r>H){
+    this.active=false; this.vx=0; this.vy=0;
+  }
+  if(!this.isMoving()){ this.vx=0; this.vy=0; }
+};
+Stone.prototype.collide=function(other){
+  if(!this.active||!other.active) return false;
+  var dx=other.x-this.x, dy=other.y-this.y;
+  var d=Math.sqrt(dx*dx+dy*dy);
+  var minD=this.r+other.r;
+  if(d>=minD||d<0.001) return false;
+  var ov=minD-d;
+  var nx=dx/d, ny=dy/d;
+  this.x-=nx*ov*0.5; this.y-=ny*ov*0.5;
+  other.x+=nx*ov*0.5; other.y+=ny*ov*0.5;
+  var tx=-ny, ty=nx;
+  var v1n=this.vx*nx+this.vy*ny;
+  var v1t=this.vx*tx+this.vy*ty;
+  var v2n=other.vx*nx+other.vy*ny;
+  var v2t=other.vx*tx+other.vy*ty;
+  var res=0.84;
+  this.vx=v2n*res*nx+v1t*tx;
+  this.vy=v2n*res*ny+v1t*ty;
+  other.vx=v1n*res*nx+v2t*tx;
+  other.vy=v1n*res*ny+v2t*ty;
+  this.spin=(Math.random()-0.5)*0.12;
+  other.spin=(Math.random()-0.5)*0.12;
+  var relSpd=Math.sqrt(Math.pow(this.vx-other.vx,2)+Math.pow(this.vy-other.vy,2));
+  SoundMgr.collision(relSpd);
+  return true;
+};
+Stone.prototype.draw=function(ctx){
+  if(!this.active) return;
+  var r=this.r;
+  var c=this.color==='red'?'#ff3c69':'#ffd200';
+  ctx.save();
+  // Outer bright ring
+  ctx.shadowColor='rgba(0,0,0,0.5)';
+  ctx.shadowBlur=8; ctx.shadowOffsetY=4;
+  ctx.beginPath(); ctx.arc(this.x,this.y,r,0,Math.PI*2);
+  ctx.fillStyle='#cfd4e2'; ctx.fill();
+  ctx.strokeStyle='#8f96a8'; ctx.lineWidth=2; ctx.stroke();
+  ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  // 3D body gradient (silver-grey granite style)
+  var g=ctx.createRadialGradient(this.x-r*0.3,this.y-r*0.3,r*0.05,this.x,this.y,r);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(0.55,'#b0b6c6'); g.addColorStop(1,'#606676');
+  ctx.beginPath(); ctx.arc(this.x,this.y,r-2,0,Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+  // Color handle ring
+  ctx.shadowColor=c; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(this.x,this.y,r*0.55,0,Math.PI*2);
+  ctx.fillStyle=c; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.shadowBlur=0;
+  // Center white cap
+  ctx.beginPath(); ctx.arc(this.x,this.y,r*0.27,0,Math.PI*2);
+  ctx.fillStyle='#ffffff'; ctx.fill();
+  // Handle bar (rotates, clearly visible grey)
+  ctx.save();
+  ctx.translate(this.x,this.y);
+  ctx.rotate(this.angle);
+  ctx.fillStyle='#303545';
+  ctx.fillRect(-r*0.08,-r*0.42,r*0.16,r*0.47);
+  ctx.beginPath(); ctx.arc(0,-r*0.42,r*0.13,0,Math.PI*2);
+  ctx.fillStyle=c; ctx.fill();
+  ctx.restore();
+  ctx.restore();
+};
+
+// =====================================================
+// CURLING LANE CLASS
+// =====================================================
+function CurlingLane(idx){
+  var self=this;
+  self.idx=idx;
+  self.canvas=document.getElementById('c-'+idx);
+  self.ctx=self.canvas.getContext('2d');
+  self.laneWrap=document.getElementById('lw-'+idx);
+  self.laneTop=document.getElementById('lt-'+idx);
+  self.laneBody=document.getElementById('lb-'+idx);
+  self.ovSetup=document.getElementById('ov-setup-'+idx);
+  self.ovDraw=document.getElementById('ov-draw-'+idx);
+  self.ovWin=document.getElementById('ov-win-'+idx);
+  self.zoneL=document.getElementById('swL-'+idx);
+  self.zoneR=document.getElementById('swR-'+idx);
+
+  // Game config
+  self.totalSets=2;
+  self.stonesPerTeam=4;
+  self.friction=0.9909;
+
+  // State machine: SETUP, DRAW, READY, AIMING, SLIDING, END_SET, GAME_OVER
+  self.state='SETUP';
+  self.currentSet=1;
+  self.scores={red:0,yellow:0};
+  self.firstPlayer='red';
+  self.turn='red';
+  self.stones=[];
+  self.activeStone=null;
+  self.thrown={red:0,yellow:0};
+  self.isExtraEnd=false;
+  self.p1Name='옐로우';
+  self.p2Name='레드';
+  self.selectedHackIdx=2; // Default to center starting position
+
+  // Aiming
+  self.aimPt=null;
+
+  // Sweeping
+  self.swL=0; self.swR=0;
+  self.swBtnL=false; self.swBtnR=false;
+  self.particles=[];
+  self.tracks=[];
+  self.lastSwT=0;
+  self.ptrs={};
+
+  self.initCanvas();
+  self.initEvents();
+  self.startLoop();
+}
+
+CurlingLane.prototype.initCanvas=function(){
+  var self=this;
+  var dpr=window.devicePixelRatio||1;
+  var rect=self.laneBody.getBoundingClientRect();
+  var w=rect.width>10?rect.width:window.innerWidth/4;
+  var h=rect.height>10?rect.height:(window.innerHeight-96);
+  self.canvas.width=Math.floor(w*dpr);
+  self.canvas.height=Math.floor(h*dpr);
+  self.canvas.style.width='100%';
+  self.canvas.style.height='100%';
+};
+
+// Computed layout helpers
+CurlingLane.prototype.W=function(){return this.canvas.width;};
+CurlingLane.prototype.H=function(){return this.canvas.height;};
+CurlingLane.prototype.hX=function(){return this.W()/2;};
+CurlingLane.prototype.hY=function(){return this.H()*0.18;};
+CurlingLane.prototype.hR=function(){return Math.min(this.W(),this.H())*0.15;};
+CurlingLane.prototype.hogY=function(){return this.H()*0.62;};
+CurlingLane.prototype.hackY=function(){return this.H()*0.76;};
+CurlingLane.prototype.stoneR=function(){return Math.min(this.W(),this.H())*0.046;};
+CurlingLane.prototype.getHackX=function(idx){
+  return this.W() * (0.35 + idx * 0.075);
+};
+
+CurlingLane.prototype.setSweepZonesVisible=function(show){
+  var d = show ? 'flex' : 'none';
+  if(this.zoneL) this.zoneL.style.display=d;
+  if(this.zoneR) this.zoneR.style.display=d;
+};
+
+CurlingLane.prototype.initEvents=function(){
+  var self=this;
+  var idx=self.idx;
+
+  // --- 세트(엔드) 선택 버튼 ---
+  var setGrid=self.ovSetup.querySelector('.set-grid');
+  var setBtns=setGrid.querySelectorAll('.set-btn');
+  for(var i=0;i<setBtns.length;i++){
+    (function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        for(var j=0;j<setBtns.length;j++) setBtns[j].classList.remove('selected');
+        btn.classList.add('selected');
+        self.totalSets=parseInt(btn.getAttribute('data-n'));
+        SoundMgr.click();
+      });
+    })(setBtns[i]);
+  }
+
+  // --- 스톤 개수 선택 버튼 ---
+  var stoneGrid=self.ovSetup.querySelector('.stone-grid');
+  var stoneBtns=stoneGrid.querySelectorAll('.stone-btn');
+  for(var i=0;i<stoneBtns.length;i++){
+    (function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        for(var j=0;j<stoneBtns.length;j++) stoneBtns[j].classList.remove('selected');
+        btn.classList.add('selected');
+        self.stonesPerTeam=parseInt(btn.getAttribute('data-s'));
+        SoundMgr.click();
+      });
+    })(stoneBtns[i]);
+  }
+
+  // --- 다음 단계로 버튼 ---
+  document.getElementById('next-'+idx).addEventListener('click',function(e){
+    e.stopPropagation();
+    SoundMgr.click();
+    self.showDraw();
+  });
+
+  // --- 선공 결정 버튼 ---
+  var drawBtn = document.getElementById('btn-draw-'+idx);
+  drawBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    drawBtn.disabled = true;
+    drawBtn.style.display = 'none';
+
+    var dr = document.getElementById('dr-'+idx);
+    var count = 0;
+    var maxCycles = 18;
+    var isYellow = true;
+    var timer = setInterval(function(){
+      isYellow = !isYellow;
+      var name = isYellow ? self.p1Name : self.p2Name;
+      dr.textContent = isYellow ? ('🟡 ' + name + ' 선공 ▶') : ('◀ 🔴 ' + name + ' 선공');
+      dr.className = 'draw-result ' + (isYellow ? 'yellow' : 'red');
+      SoundMgr.click();
+      count++;
+
+      if(count >= maxCycles) {
+        clearInterval(timer);
+        var finalYellow = Math.random() < 0.5;
+        self.firstPlayer = finalYellow ? 'yellow' : 'red';
+        self.turn = self.firstPlayer;
+
+        var firstName = finalYellow ? self.p1Name : self.p2Name;
+        dr.textContent = finalYellow ? ('🟡 ' + firstName + ' 선공! ▶') : ('◀ 🔴 ' + firstName + ' 선공!');
+        dr.className = 'draw-result ' + (finalYellow ? 'yellow' : 'red');
+        SoundMgr.card();
+
+        document.getElementById('start-'+idx).style.display = 'block';
+      }
+    }, 80);
+  });
+
+  // --- 경기 시작 버튼 ---
+  document.getElementById('start-'+idx).addEventListener('click',function(e){
+    e.stopPropagation();
+    SoundMgr.click();
+    self.ovDraw.style.display='none';
+    self.startGame();
+  });
+
+  // --- 새 경기 시작 버튼 ---
+  document.getElementById('restart-'+idx).addEventListener('click',function(e){
+    e.stopPropagation();
+    SoundMgr.click();
+    self.ovWin.style.display='none';
+    self.resetToSetup();
+  });
+
+  // --- Canvas 포인터 이벤트 (발사 & 스위핑) ---
+  self.canvas.addEventListener('pointerdown',function(e){self.onPtrDown(e);});
+  self.canvas.addEventListener('pointermove',function(e){self.onPtrMove(e);});
+  self.canvas.addEventListener('pointerup',function(e){self.onPtrUp(e);});
+  self.canvas.addEventListener('pointercancel',function(e){self.onPtrUp(e);});
+
+  // --- 좌/우 스위핑 버튼 ---
+  function bindSweepZone(zoneEl, isLeft){
+    // pointer-events: none 이므로 canvas에서 통합 감지 처리합니다.
+  }
+  bindSweepZone(self.zoneL,true);
+  bindSweepZone(self.zoneR,false);
+};
+
+CurlingLane.prototype.getCoords=function(e){
+  var rect=this.canvas.getBoundingClientRect();
+  return {
+    x:(e.clientX-rect.left)/rect.width*this.W(),
+    y:(e.clientY-rect.top)/rect.height*this.H()
+  };
+};
+
+CurlingLane.prototype.onPtrDown=function(e){
+  if(this.state!=='READY' && this.state!=='SLIDING') return;
+  this.canvas.setPointerCapture(e.pointerId);
+  var c=this.getCoords(e);
+  if(this.state==='READY'){
+    if(this.activeStone&&this.activeStone.active){
+      var hY=this.hackY();
+      var r=this.stoneR();
+      
+      var clickedGhostIdx = -1;
+      for(var i=0; i<5; i++){
+        var fx = this.getHackX(i);
+        var dx = c.x - fx;
+        var dy = c.y - hY;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < r * 1.3){
+          clickedGhostIdx = i;
+          break;
+        }
+      }
+      
+      if(clickedGhostIdx !== -1 && clickedGhostIdx !== this.selectedHackIdx){
+        this.selectedHackIdx = clickedGhostIdx;
+        this.activeStone.x = this.getHackX(clickedGhostIdx);
+        SoundMgr.pyong();
+        return;
+      }
+      
+      var dx = c.x - this.activeStone.x;
+      var dy = c.y - this.activeStone.y;
+      var d = Math.sqrt(dx*dx + dy*dy);
+      if(d < r * 3.0){
+        this.state = 'AIMING';
+        this.aimStart = { x: this.activeStone.x, y: this.activeStone.y };
+        this.aimPt = { x: c.x, y: c.y };
+      }
+    }
+  } else if(this.state==='SLIDING'){
+    // 비비기 패드 영역 터치 판정 (y >= hogY 및 y <= H - 58)
+    if(c.y>=this.hogY() && c.y<=this.H()-58){
+      var isLeft=c.x<this.W()/2;
+      this.ptrs[e.pointerId]={x:c.x,y:c.y,t:performance.now()};
+      var zone = isLeft ? this.zoneL : this.zoneR;
+      if(zone) zone.classList.add('on');
+      if(isLeft) this.swBtnL=true; else this.swBtnR=true;
+    }
+  }
+};
+
+CurlingLane.prototype.onPtrMove=function(e){
+  var c=this.getCoords(e);
+  if(this.state==='AIMING'){
+    this.aimPt={x:c.x,y:c.y};
+  } else if(this.state==='SLIDING'){
+    var prev=this.ptrs[e.pointerId];
+    var now=performance.now();
+    if(prev){
+      var dt=now-prev.t;
+      if(dt>0){
+        var dx=c.x-prev.x, dy=c.y-prev.y;
+        var spd=Math.sqrt(dx*dx+dy*dy)/dt;
+        if(spd>0.25){
+          // 비비기 패드 영역 내부에서 문지를 때만 비비기 작동
+          if(c.y>=this.hogY() && c.y<=this.H()-58){
+            var isLeft=c.x<this.W()/2;
+            this.applySweep(isLeft,spd,c.x,c.y);
+          }
+        }
+      }
+    }
+    this.ptrs[e.pointerId]={x:c.x,y:c.y,t:now};
+  }
+};
+
+CurlingLane.prototype.onPtrUp=function(e){
+  try{this.canvas.releasePointerCapture(e.pointerId);}catch(er){}
+  delete this.ptrs[e.pointerId];
+  if(this.state==='AIMING'){
+    this.launch();
+  } else if(this.state==='SLIDING'){
+    this.swBtnL=false; this.swBtnR=false;
+    if(this.zoneL) {
+      this.zoneL.classList.remove('on');
+      this.zoneL.classList.remove('glow-red', 'glow-yellow');
+    }
+    if(this.zoneR) {
+      this.zoneR.classList.remove('on');
+      this.zoneR.classList.remove('glow-red', 'glow-yellow');
+    }
+  }
+};
+
+CurlingLane.prototype.launch=function(){
+  if(!this.aimStart||!this.aimPt) return;
+  var dx=this.aimStart.x-this.aimPt.x;
+  var dy=this.aimStart.y-this.aimPt.y;
+  var d=Math.sqrt(dx*dx+dy*dy);
+  if(d<8){ this.state='READY'; return; }
+  var intensity=Math.min(d/110,1.0);
+  var maxV=this.H()*0.006949;
+  var angle=Math.atan2(dy,dx);
+  this.activeStone.vx=Math.cos(angle)*intensity*maxV;
+  this.activeStone.vy=Math.sin(angle)*intensity*maxV;
+  this.activeStone.spin=(Math.random()-0.5)*0.08;
+  this.state='SLIDING';
+  this.setSweepZonesVisible(true);
+  this.thrown[this.turn]++;
+  SoundMgr.click();
+  this.aimStart=null; this.aimPt=null;
+};
+
+CurlingLane.prototype.applySweep=function(isLeft,spd,px,py){
+  if(this.state!=='SLIDING') return;
+  var str=Math.min(1,(spd-0.25)/1.2);
+  if(isLeft) this.swL=Math.max(this.swL,str);
+  else this.swR=Math.max(this.swR,str);
+  var now=performance.now();
+  if(now-this.lastSwT>75){
+    SoundMgr.sweep(str);
+    this.lastSwT=now;
+  }
+  // Visual track 제거
+  // Particles (왼쪽 레드팀 색상, 오른쪽 옐로우팀 색상 고정)
+  for(var i=0;i<3;i++){
+    this.particles.push({
+      x:px+(Math.random()-0.5)*18,
+      y:py+(Math.random()-0.5)*18,
+      vx:(Math.random()-0.5)*2.5+(isLeft?-0.5:0.5),
+      vy:(Math.random()-0.5)*2-0.8,
+      s:Math.random()*2.5+0.8,
+      a:1,d:0.04+Math.random()*0.03,
+      c:isLeft?'#ff3c69':'#ffd200'
+    });
+  }
+
+  // 비비기 패드 고정 팀 색상 글로우 효과 적용 (좌 레드, 우 옐로우)
+  var zone = isLeft ? this.zoneL : this.zoneR;
+  if(zone){
+    var glowClass = isLeft ? 'glow-red' : 'glow-yellow';
+    zone.classList.remove('glow-red', 'glow-yellow');
+    zone.classList.add(glowClass);
+    if(zone.glowTimeout) clearTimeout(zone.glowTimeout);
+    zone.glowTimeout = setTimeout(function(){
+      zone.classList.remove('glow-red', 'glow-yellow');
+    }, 150);
+  }
+};
+
+CurlingLane.prototype.showDraw=function(){
+  this.state='DRAW';
+  this.ovSetup.style.display='none';
+  this.ovDraw.style.display='flex';
+  var drawBtn=document.getElementById('btn-draw-'+this.idx);
+  drawBtn.disabled=false;
+  drawBtn.style.display='block';
+  var dr=document.getElementById('dr-'+this.idx);
+  dr.textContent=''; dr.className='draw-result';
+  document.getElementById('start-'+this.idx).style.display='none';
+};
+
+CurlingLane.prototype.startGame=function(){
+  this.currentSet=1;
+  this.scores={red:0,yellow:0};
+  this.isExtraEnd=false;
+  this.turn=this.firstPlayer;
+  this.resetSet();
+};
+
+CurlingLane.prototype.resetSet=function(){
+  this.stones=[];
+  this.thrown={red:0,yellow:0};
+  this.activeStone=null;
+  this.particles=[];
+  this.tracks=[];
+  this.swL=0; this.swR=0;
+  this.swBtnL=false; this.swBtnR=false;
+  this.setSweepZonesVisible(false);
+  this.spawnStone();
+  this.state='READY';
+  this.updateHeader();
+};
+
+CurlingLane.prototype.spawnStone=function(){
+  var r=this.stoneR();
+  var id=this.turn+'-'+this.thrown[this.turn];
+  this.activeStone=new Stone(this.getHackX(this.selectedHackIdx),this.hackY(),r,this.turn,id);
+  this.stones.push(this.activeStone);
+  this.updateHeader();
+};
+
+CurlingLane.prototype.updateHeader=function(){
+  var self=this;
+  self.laneWrap.classList.remove('turn-red','turn-yellow');
+  if(self.state==='READY'||self.state==='AIMING'||self.state==='SLIDING'){
+    self.laneWrap.classList.add('turn-'+self.turn);
+  }
+  
+  // 상단 스코어보드 값 연동 (왼쪽 레드, 오른쪽 옐로우)
+  var redScoreEl = document.getElementById('score-red-' + self.idx);
+  var yellowScoreEl = document.getElementById('score-yellow-' + self.idx);
+  var titleEl = document.getElementById('title-' + self.idx);
+  
+  if(redScoreEl) redScoreEl.textContent = self.scores.red;
+  if(yellowScoreEl) yellowScoreEl.textContent = self.scores.yellow;
+  if(titleEl) {
+    var setStr = self.isExtraEnd ? '연장전' : 'SET ' + self.currentSet + '/' + self.totalSets;
+    titleEl.textContent = 'LANE ' + (self.idx + 1) + ' (' + setStr + ')';
+  }
+};
+
+CurlingLane.prototype.resetToSetup=function(){
+  this.state='SETUP';
+  this.stones=[];
+  this.activeStone=null;
+  this.particles=[];
+  this.tracks=[];
+  this.setSweepZonesVisible(false);
+  this.ovSetup.style.display='flex';
+  this.ovDraw.style.display='none';
+  this.ovWin.style.display='none';
+  this.laneWrap.classList.remove('turn-red','turn-yellow');
+};
+
+CurlingLane.prototype.startLoop=function(){
+  var self=this;
+  function tick(){
+    self.update();
+    self.render();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+};
+
+CurlingLane.prototype.update=function(){
+  var self=this;
+  if(self.state!=='SLIDING') return;
+  // Apply sweeping steering to active stone
+  if(self.activeStone&&self.activeStone.isMoving()){
+    var spd=Math.sqrt(self.activeStone.vx*self.activeStone.vx+self.activeStone.vy*self.activeStone.vy);
+    if(spd>0.1){
+      var maxV=self.H()*0.006949;
+      var speedRatio=Math.min(1.0, spd / maxV);
+      var forceCoeff=0.012; // 매우 은은하고 미세한 방향 전환
+      var fX=0;
+      if(self.swL>0.04){
+        fX-=self.swL*speedRatio*forceCoeff;
+      }
+      if(self.swR>0.04){
+        fX+=self.swR*speedRatio*forceCoeff;
+      }
+      self.activeStone.vx+=fX;
+      
+      // 속도가 느려질수록 마찰력 감소 효과도 줄어들도록 감쇠 적용
+      var maxSw=Math.max(self.swL, self.swR);
+      if(maxSw>0.04){
+        self.activeStone.fMod=Math.min(self.activeStone.fMod, 1.0 - maxSw * 0.10 * speedRatio);
+      }
+    }
+  }
+
+  // Decay sweep strength
+  self.swL*=0.87; self.swR*=0.87;
+
+  // Update stones
+  var W=self.W(), H=self.H();
+  for(var i=0;i<self.stones.length;i++){
+    self.stones[i].update(self.friction,W,H);
+  }
+  // Collision resolution
+  for(var i=0;i<self.stones.length;i++){
+    for(var j=i+1;j<self.stones.length;j++){
+      self.stones[i].collide(self.stones[j]);
+    }
+  }
+  // Particles update
+  for(var i=self.particles.length-1;i>=0;i--){
+    var p=self.particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.a-=p.d;
+    if(p.a<=0) self.particles.splice(i,1);
+  }
+  // Tracks decay
+  for(var i=self.tracks.length-1;i>=0;i--){
+    self.tracks[i].a-=self.tracks[i].d;
+    if(self.tracks[i].a<=0) self.tracks.splice(i,1);
+  }
+
+  // Check if all stones stopped
+  var anyMoving=false;
+  for(var i=0;i<self.stones.length;i++){
+    if(self.stones[i].active&&self.stones[i].isMoving()){anyMoving=true;break;}
+  }
+  if(!anyMoving){
+    // Hog line check: if thrown stone is still below hog line, remove it
+    if(self.activeStone&&self.activeStone.active&&self.activeStone.y>self.hogY()){
+      self.activeStone.active=false;
+      var cColor=self.activeStone.color==='red'?'#ff3c69':'#ffd200';
+      for(var i=0;i<8;i++){
+        self.particles.push({
+          x:self.activeStone.x,y:self.activeStone.y,
+          vx:(Math.random()-0.5)*3.5,vy:(Math.random()-0.5)*3.5,
+          s:Math.random()*3+1,a:1,d:0.05,c:cColor
+        });
+      }
+    }
+    self.activeStone=null;
+    self.setSweepZonesVisible(false);
+    self.swBtnL=false; self.swBtnR=false;
+    if(self.zoneL) self.zoneL.classList.remove('on');
+    if(self.zoneR) self.zoneR.classList.remove('on');
+    self.afterStoneStops();
+  }
+};
+
+CurlingLane.prototype.afterStoneStops=function(){
+  var total=this.thrown.red+this.thrown.yellow;
+  var max=this.stonesPerTeam*2;
+  if(total<max){
+    this.turn=(this.turn==='red'?'yellow':'red');
+    this.state='READY';
+    this.spawnStone();
+  } else {
+    this.state='END_SET';
+    var self=this;
+    setTimeout(function(){ self.calcScore(); },1200);
+  }
+};
+
+CurlingLane.prototype.calcScore=function(){
+  var self=this;
+  var hX=self.hX(), hY=self.hY();
+  // Find stones in house (distance to center < houseR*1.2)
+  var inHouse=[];
+  for(var i=0;i<self.stones.length;i++){
+    var s=self.stones[i];
+    if(!s.active) continue;
+    var dx=s.x-hX, dy=s.y-hY;
+    var d=Math.sqrt(dx*dx+dy*dy);
+    if(d<self.hR()*1.1+s.r){
+      inHouse.push({stone:s,dist:d});
+    }
+  }
+  if(inHouse.length===0){
+    self.nextSetOrEnd();
+    return;
+  }
+  inHouse.sort(function(a,b){return a.dist-b.dist;});
+  var winner=inHouse[0].stone.color;
+  var loser=winner==='red'?'yellow':'red';
+  // Find loser's closest
+  var loserDist=Infinity;
+  for(var i=0;i<inHouse.length;i++){
+    if(inHouse[i].stone.color===loser){
+      loserDist=inHouse[i].dist; break;
+    }
+  }
+  var pts=0;
+  for(var i=0;i<inHouse.length;i++){
+    var s=inHouse[i];
+    if(s.stone.color===winner&&s.dist<loserDist) pts++;
+    else if(s.stone.color===loser) break;
+  }
+  self.scores[winner]+=pts;
+  self.updateHeader();
+  SoundMgr.win();
+  setTimeout(function(){self.nextSetOrEnd();},2500);
+};
+
+CurlingLane.prototype.nextSetOrEnd=function(){
+  if(this.currentSet<this.totalSets){
+    this.currentSet++;
+    this.firstPlayer=this.firstPlayer==='red'?'yellow':'red';
+    this.turn=this.firstPlayer;
+    this.resetSet();
+  } else if(this.scores.red===this.scores.yellow && !this.isExtraEnd){
+    // 동점 시 단판 익스트라 엔드 1회 진행
+    this.isExtraEnd=true;
+    this.currentSet++;
+    this.firstPlayer=this.firstPlayer==='red'?'yellow':'red';
+    this.turn=this.firstPlayer;
+    this.resetSet();
+  } else {
+    this.state='GAME_OVER';
+    this.showWin();
+  }
+};
+
+CurlingLane.prototype.showWin=function(){
+  var r=this.scores.red, y=this.scores.yellow;
+  var titleEl=document.getElementById('wt-'+this.idx);
+  var scoreEl=document.getElementById('ws-'+this.idx);
+  if(r>y){
+    titleEl.textContent='🔴 레드팀 승리!';
+    titleEl.className='win-title red-won';
+  } else if(y>r){
+    titleEl.textContent='🟡 옐로우팀 승리!';
+    titleEl.className='win-title yellow-won';
+  } else {
+    titleEl.textContent='🤝 무승부 (DRAW)';
+    titleEl.className='win-title';
+  }
+  scoreEl.textContent='최종 세트 점수 ● 레드 '+r+' : 옐로우 '+y+(this.isExtraEnd?' (연장전 진행)':'');
+  this.ovWin.style.display='flex';
+};
+
+// =====================================================
+// RENDER
+// =====================================================
+CurlingLane.prototype.render=function(){
+  var self=this;
+  var ctx=self.ctx;
+  var W=self.W(), H=self.H();
+  ctx.clearRect(0,0,W,H);
+
+
+
+  // Lane edge glow
+  ctx.strokeStyle='rgba(0,210,255,0.08)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(0.5,0); ctx.lineTo(0.5,H);
+  ctx.moveTo(W-0.5,0); ctx.lineTo(W-0.5,H);
+  ctx.stroke();
+
+  // House circles
+  var hX=self.hX(), hY=self.hY(), hR=self.hR();
+  var rings=[
+    {r:hR, fill:'rgba(0,176,255,0.18)', stroke:'rgba(0,176,255,0.6)', lw:2},
+    {r:hR*0.66, fill:'rgba(255,255,255,0.75)', stroke:'rgba(255,255,255,0.9)', lw:2},
+    {r:hR*0.38, fill:'rgba(255,60,105,0.25)', stroke:'rgba(255,60,105,0.7)', lw:2},
+    {r:hR*0.13, fill:'rgba(255,255,255,0.9)', stroke:'rgba(255,255,255,1)', lw:1.5}
+  ];
+  for(var i=0;i<rings.length;i++){
+    var rg=rings[i];
+    ctx.beginPath(); ctx.arc(hX,hY,rg.r,0,Math.PI*2);
+    ctx.fillStyle=rg.fill; ctx.fill();
+    ctx.strokeStyle=rg.stroke; ctx.lineWidth=rg.lw; ctx.stroke();
+  }
+  // Cross hair
+  ctx.strokeStyle='rgba(255,255,255,0.12)';
+  ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(hX-hR*1.05,hY); ctx.lineTo(hX+hR*1.05,hY);
+  ctx.moveTo(hX,hY-hR*1.05); ctx.lineTo(hX,hY+hR*1.05);
+  ctx.stroke();
+
+  // Sweep tracks
+  for(var i=0;i<self.tracks.length;i++){
+    var t=self.tracks[i];
+    var tg=ctx.createRadialGradient(t.x,t.y,0,t.x,t.y,t.r);
+    tg.addColorStop(0,'rgba(255,255,255,'+t.a*0.35+')');
+    tg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(t.x,t.y,t.r,0,Math.PI*2);
+    ctx.fillStyle=tg; ctx.fill();
+  }
+
+  // Hog line
+  ctx.strokeStyle='#ff3c69'; ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(0,self.hogY()); ctx.lineTo(W,self.hogY());
+  ctx.stroke();
+
+
+  // Hack line
+  ctx.strokeStyle='rgba(0,176,255,0.5)'; ctx.lineWidth=1.5;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,self.hackY()); ctx.lineTo(W,self.hackY());
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Delivery zone left/right guide lines & shading (투척 영역 좌우 가이드선 및 음영)
+  ctx.fillStyle='rgba(255,255,255,0.018)';
+  ctx.fillRect(W*0.35, self.hackY(), W*0.30, (H-58) - self.hackY());
+
+  ctx.strokeStyle='rgba(255,255,255,0.18)';
+  ctx.lineWidth=1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(W*0.35, self.hackY()); ctx.lineTo(W*0.35, H-58);
+  ctx.moveTo(W*0.65, self.hackY()); ctx.lineTo(W*0.65, H-58);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 5 discrete starting positions guide (Ghost Stones) - READY 상태일 때만 렌더링
+  if(self.state==='READY'){
+    var hY = self.hackY();
+    var r = self.stoneR();
+    var teamColor = self.turn === 'red' ? '#ff3c69' : '#ffd200';
+    for(var i=0; i<5; i++){
+      var fx = self.getHackX(i);
+      var isSel = (self.selectedHackIdx === i);
+      
+      if(isSel){
+        ctx.save();
+        ctx.shadowColor = teamColor;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = teamColor;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(fx, hY, r + 4, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = teamColor;
+        ctx.beginPath();
+        ctx.arc(fx, hY, r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3,3]);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // Particles
+  for(var i=0;i<self.particles.length;i++){
+    var p=self.particles[i];
+    ctx.globalAlpha=p.a;
+    ctx.fillStyle=p.c;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.s,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // Aiming vector
+  if(self.state==='AIMING'&&self.aimStart&&self.aimPt){
+    var dx=self.aimStart.x-self.aimPt.x;
+    var dy=self.aimStart.y-self.aimPt.y;
+    var d=Math.sqrt(dx*dx+dy*dy);
+    if(d>8){
+      var pwr=Math.min(d/110,1);
+      var ang=Math.atan2(dy,dx);
+      var arLen=18+pwr*80;
+      var ax=self.aimStart.x+Math.cos(ang)*arLen;
+      var ay=self.aimStart.y+Math.sin(ang)*arLen;
+      // Rubber band
+      ctx.strokeStyle='rgba(255,255,255,0.12)';
+      ctx.lineWidth=3;
+      ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(self.aimStart.x,self.aimStart.y);
+      ctx.lineTo(self.aimPt.x,self.aimPt.y);
+      ctx.stroke();
+      // Arrow
+      var ag=ctx.createLinearGradient(self.aimStart.x,self.aimStart.y,ax,ay);
+      ag.addColorStop(0,'rgba(0,210,255,0.7)');
+      ag.addColorStop(0.6,'rgba(255,220,0,0.85)');
+      ag.addColorStop(1,'rgba(255,60,105,0.95)');
+      ctx.strokeStyle=ag; ctx.lineWidth=4.5; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(self.aimStart.x,self.aimStart.y);
+      ctx.lineTo(ax,ay);
+      ctx.stroke();
+      // Arrowhead
+      var hLen=10;
+      ctx.strokeStyle='rgba(255,60,105,0.95)'; ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.moveTo(ax,ay);
+      ctx.lineTo(ax+Math.cos(ang-2.55)*hLen,ay+Math.sin(ang-2.55)*hLen);
+      ctx.moveTo(ax,ay);
+      ctx.lineTo(ax+Math.cos(ang+2.55)*hLen,ay+Math.sin(ang+2.55)*hLen);
+      ctx.stroke();
+    }
+  }
+
+  // Stones
+  for(var i=0;i<self.stones.length;i++){
+    self.stones[i].draw(ctx);
+  }
+
+  // HUD panel (bottom)
+  ctx.fillStyle='rgba(4,9,25,0.7)';
+  ctx.fillRect(0,H-58,W,58);
+  ctx.strokeStyle='rgba(255,255,255,0.06)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H-58); ctx.lineTo(W,H-58); ctx.stroke();
+
+  var fs=Math.max(10,Math.min(14,W*0.045));
+  ctx.font='700 '+fs+'px Outfit,sans-serif';
+
+  if(self.state==='READY'||self.state==='AIMING'){
+    var turnColor=self.turn==='red'?'#ff3c69':'#ffd200';
+    ctx.fillStyle=turnColor;
+    ctx.textAlign='center';
+    ctx.fillText((self.turn==='red'?'🔴 RED':'🟡 YELLOW')+' TURN',W/2,H-38);
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font='400 '+(fs-2)+'px Noto Sans KR,sans-serif';
+    ctx.fillText('스톤을 뒤로 당겨 발사하세요',W/2,H-20);
+  } else if(self.state==='SLIDING'){
+    ctx.fillStyle='rgba(0,210,255,0.85)';
+    ctx.textAlign='center';
+    ctx.fillText('◀ 비비기로 방향 조절 ▶',W/2,H-38);
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.font='400 '+(fs-2)+'px Noto Sans KR,sans-serif';
+    ctx.fillText('하단의 좌/우 패드를 문지르거나 터치하세요',W/2,H-20);
+  } else if(self.state==='END_SET'){
+    ctx.fillStyle='#ffaa00';
+    ctx.textAlign='center';
+    ctx.fillText('세트 종료! 점수 계산 중...',W/2,H-35);
+  }
+  ctx.textAlign='left';
+
+  // 남은 스톤 수 표시
+  var redLeft=self.stonesPerTeam-self.thrown.red;
+  var yellowLeft=self.stonesPerTeam-self.thrown.yellow;
+  var dotR=Math.max(5,W*0.02);
+  
+  // 레드 팀 남은 스톤 (좌측 하단)
+  var startXRed = 12 + dotR;
+  for(var i=0;i<redLeft;i++){
+    ctx.beginPath();
+    ctx.arc(startXRed + i*(dotR*2.5 + 4), H-28, dotR, 0, Math.PI*2);
+    ctx.fillStyle='#ff3c69';
+    ctx.shadowColor='rgba(255, 60, 105, 0.4)';
+    ctx.shadowBlur=4;
+    ctx.fill();
+    ctx.shadowBlur=0;
+  }
+  
+  // 옐로우 팀 남은 스톤 (우측 하단)
+  var startXYellow = W - 12 - dotR;
+  for(var i=0;i<yellowLeft;i++){
+    ctx.beginPath();
+    ctx.arc(startXYellow - i*(dotR*2.5 + 4), H-28, dotR, 0, Math.PI*2);
+    ctx.fillStyle='#ffd200';
+    ctx.shadowColor='rgba(255, 210, 0, 0.4)';
+    ctx.shadowBlur=4;
+    ctx.fill();
+    ctx.shadowBlur=0;
+  }
+};
+
+// =====================================================
+// GLOBAL STATE
+// =====================================================
+var lanes = [];
+
+// Rules Modal
+document.getElementById('btn-show-rules').addEventListener('click', function(){
+  document.getElementById('rules-modal').style.display = 'flex';
+  SoundMgr.card();
+});
+document.getElementById('btn-close-rules').addEventListener('click', function(){
+  document.getElementById('rules-modal').style.display = 'none';
+  SoundMgr.click();
+});
+
+// Home navigation helper
+function goHome() {
+  document.getElementById('screen-welcome').style.display = 'flex';
+  for(var i=0; i<lanes.length; i++) {
+    lanes[i].resetToSetup();
+  }
+}
+
+document.getElementById('btn-home').addEventListener('click', function(e){
+  e.stopPropagation();
+  if (confirm("메인 화면으로 이동하시겠습니까? 현재 진행 중인 게임은 종료됩니다.")) {
+    goHome();
+  }
+});
+
+// Start Game
+document.getElementById('btn-start-normal').addEventListener('click', function(){
+  document.getElementById('screen-welcome').style.display = 'none';
+  for(var i=0; i<lanes.length; i++) {
+    lanes[i].resetToSetup();
+    lanes[i].initCanvas();
+  }
+  SoundMgr.win();
+});
+
+// Go to other games
+document.getElementById('btn-other-game').addEventListener('click', function(){
+  window.open('https://kingsmath.com', '_self');
+});
+
+// =====================================================
+// MAIN INIT
+// =====================================================
+function initGame(){
+  SoundMgr.init();
+
+  // Initialize after one rAF to ensure layout is computed
+  requestAnimationFrame(function(){
+    for(var i=0;i<4;i++){
+      try{ lanes.push(new CurlingLane(i)); }
+      catch(e){ console.error('Lane '+i+' init error:',e); }
+    }
+
+    // Set initially to Welcome screen
+    goHome();
+
+    // Re-init canvas sizes after layout settles
+    requestAnimationFrame(function(){
+      for(var i=0;i<lanes.length;i++) lanes[i].initCanvas();
+    });
+  });
+}
+
+// Resize handler
+window.addEventListener('resize',function(){
+  for(var i=0;i<lanes.length;i++) lanes[i].initCanvas();
+});
+
+// Global controls
+document.getElementById('btn-sound').addEventListener('click',function(){
+  SoundMgr.init();
+  var on=SoundMgr.toggle();
+  this.textContent=on?'🔊 사운드 ON':'🔇 사운드 OFF';
+});
+
+document.getElementById('btn-fs').addEventListener('click',function(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen();
+    this.textContent='🖥️ 창 모드';
+  } else {
+    document.exitFullscreen();
+    this.textContent='🖥️ 전체화면';
+  }
+});
+document.addEventListener('fullscreenchange',function(){
+  var btn=document.getElementById('btn-fs');
+  btn.textContent=document.fullscreenElement?'🖥️ 창 모드':'🖥️ 전체화면';
+});
+
+document.getElementById('btn-reset').addEventListener('click',function(){
+  if(confirm('모든 경기장을 초기화하시겠습니까?')){
+    goHome();
+  }
+});
+
+// First touch initializes audio
+document.body.addEventListener('pointerdown',function(){SoundMgr.init();},{once:true});
+
+// Start
+document.addEventListener('DOMContentLoaded',initGame);
+// If DOM already loaded (e.g. script at bottom)
+if(document.readyState==='complete'||document.readyState==='interactive'){
+  initGame();
+}
+</script>
+</body>
+</html>
