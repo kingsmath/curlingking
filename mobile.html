@@ -680,14 +680,19 @@ h1.main-title {
 
     <!-- 헤더 -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;">
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
         <span style="font-size:22px;">🥌</span>
-        <div>
-          <div style="font-size:16px;font-weight:900;color:#fff;letter-spacing:-0.3px;">컬링 KING — 게임 가이드</div>
-          <div style="font-size:11px;color:#5a7099;font-weight:500;letter-spacing:0.5px;">Curling King Game Guide</div>
+        <div style="min-width:0;">
+          <div style="font-size:16px;font-weight:900;color:#fff;letter-spacing:-0.3px;">컬링킹 모바일 — 게임 가이드</div>
+          <div style="font-size:11px;color:#5a7099;font-weight:500;letter-spacing:0.5px;">Curling King Mobile Guide</div>
         </div>
       </div>
-      <button id="btn-close-rules" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button id="qr-thumb-btn" title="QR코드로 이 페이지 열기" style="background:#fff;border:1px solid rgba(0,210,255,0.35);border-radius:9px;padding:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;line-height:0;">
+          <img id="qr-thumb-img" alt="QR 코드" width="34" height="34" style="width:34px;height:34px;display:block;">
+        </button>
+        <button id="btn-close-rules" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;">✕</button>
+      </div>
     </div>
 
     <!-- 슬라이드 진행 바 -->
@@ -1288,6 +1293,18 @@ h1.main-title {
 
   </div><!-- /slide-box -->
 </div><!-- /rules-modal -->
+
+<!-- ========== QR 코드 확대 라이트박스 ========== -->
+<div id="qr-lightbox" style="display:none; position:fixed; inset:0; z-index:3500; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); align-items:center; justify-content:center; touch-action:none; padding:24px;">
+  <div style="position:relative; background:linear-gradient(160deg,#0c1635 0%,#091228 100%); border:1px solid rgba(0,210,255,0.3); border-radius:24px; padding:28px 26px 22px; display:flex; flex-direction:column; align-items:center; gap:14px; max-width:320px; width:100%; box-shadow:0 0 60px rgba(0,150,255,0.2), 0 24px 60px rgba(0,0,0,0.7);">
+    <button id="qr-lightbox-close" style="position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#aaa;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:none;">✕</button>
+    <div style="font-size:14px;font-weight:800;color:#fff;">📱 QR코드로 바로 열기</div>
+    <div style="background:#fff;border-radius:14px;padding:12px;">
+      <img id="qr-large-img" alt="QR 코드 확대" width="240" height="240" style="width:240px;height:240px;display:block;">
+    </div>
+    <div id="qr-url-text" style="font-size:11px;color:#7fa8d0;word-break:break-all;text-align:center;line-height:1.5;"></div>
+  </div>
+</div>
 
 <!-- ========== 경기장 레이아웃 컨테이너 ========== -->
 <div id="game-container">
@@ -2719,6 +2736,55 @@ var lanes = [];
 
   // 초기 렌더
   goTo(0);
+})();
+
+// =====================================================
+// QR 코드 (게임 가이드 상단) — 현재 페이지 주소를 QR로 표시,
+// 클릭하면 확대된 QR을 라이트박스로 보여준다.
+// =====================================================
+(function(){
+  var pageUrl = window.location.href;
+  var qrApiBase = 'https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(pageUrl) + '&size=';
+
+  var thumbImg = document.getElementById('qr-thumb-img');
+  var largeImg = document.getElementById('qr-large-img');
+  var urlText = document.getElementById('qr-url-text');
+  var thumbBtn = document.getElementById('qr-thumb-btn');
+  var lightbox = document.getElementById('qr-lightbox');
+  var closeBtn = document.getElementById('qr-lightbox-close');
+
+  if(thumbImg) thumbImg.src = qrApiBase + '80x80';
+  if(largeImg) largeImg.src = qrApiBase + '480x480';
+  if(urlText) urlText.textContent = pageUrl;
+
+  function openLightbox(){
+    if(!lightbox) return;
+    lightbox.style.display = 'flex';
+    SoundMgr.card();
+  }
+  function closeLightbox(){
+    if(!lightbox) return;
+    lightbox.style.display = 'none';
+    SoundMgr.click();
+  }
+
+  if(thumbBtn){
+    thumbBtn.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      openLightbox();
+    });
+  }
+  if(closeBtn){
+    closeBtn.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      closeLightbox();
+    });
+  }
+  if(lightbox){
+    lightbox.addEventListener('pointerdown', function(e){
+      if(e.target === lightbox) closeLightbox();
+    });
+  }
 })();
 
 // Home navigation helper
