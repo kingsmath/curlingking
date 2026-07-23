@@ -654,7 +654,12 @@ h1.main-title {
 <div id="screen-welcome" class="screen-welcome">
   <div class="welcome-container">
     <span class="crown-deco">🥌</span>
-    <h1 class="main-title">컬링킹 모바일</h1>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:0.1rem;">
+      <h1 class="main-title" style="margin-bottom:0;">컬링킹 모바일</h1>
+      <button id="qr-thumb-btn" title="QR코드로 이 페이지 열기" style="background:#fff;border:1px solid rgba(0,210,255,0.4);border-radius:8px;padding:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;line-height:0;">
+        <img id="qr-thumb-img" alt="QR 코드" width="28" height="28" style="width:28px;height:28px;display:block;">
+      </button>
+    </div>
     <div class="subtitle-wrapper">
       <span class="subtitle-deco-line"></span>
       <div class="subtitle">한 개의 레인에서 즐기는 1:1 컬링 대결</div>
@@ -688,9 +693,6 @@ h1.main-title {
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-        <button id="qr-thumb-btn" title="QR코드로 이 페이지 열기" style="background:#fff;border:1px solid rgba(0,210,255,0.35);border-radius:9px;padding:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;line-height:0;">
-          <img id="qr-thumb-img" alt="QR 코드" width="34" height="34" style="width:34px;height:34px;display:block;">
-        </button>
         <button id="btn-close-rules" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:none;">✕</button>
       </div>
     </div>
